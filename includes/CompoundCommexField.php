@@ -36,7 +36,7 @@ class CompoundCommexField extends CommexField {
    * Return an array of values.
    */
   function __get($prop) {
-    $result = [];
+    $result = array();
     foreach ($this->subFields as $subfield) {
       $result[] = $subfield->value;
     }
@@ -54,7 +54,7 @@ class CompoundCommexField extends CommexField {
    * Concatenate the subfields.
    */
   public function view() {
-    $vals = [];
+    $vals = array();
     foreach ($this->subFields as $subField) {
       $vals[] = $subField->view();
     }

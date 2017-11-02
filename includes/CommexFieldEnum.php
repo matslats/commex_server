@@ -6,7 +6,7 @@
 
 class CommexFieldEnum extends CommexField {
 
-  protected $options = [];
+  protected $options = array();
   protected $multiple;
 
   /**

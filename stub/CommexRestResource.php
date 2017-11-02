@@ -97,7 +97,7 @@ abstract class CommexRestResourceBase implements CommexRestResourceInterface {
    * {@inheritdoc}
    */
   public function getOptionsFields($method) {
-    $fields = [];
+    $fields = array();
     if ($method != 'DELETE') {// DELETE requires no fields
       //make an empty commexObj and then interrogate it for this method
       $obj = $this->getObj();

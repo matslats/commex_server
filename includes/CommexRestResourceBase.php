@@ -51,7 +51,7 @@ abstract class CommexRestResourceBase {
    * {@inheritdoc}
    */
   function operations($id) {
-    $operations = [];
+    $operations = array();
     return $operations;
   }
 
@@ -60,7 +60,7 @@ abstract class CommexRestResourceBase {
    */
   public function getOptions($id = NULL, $operation = NULL) {
     //we can read the commex object to know about view and edit access.
-    $methods = ['OPTIONS'];
+    $methods = array('OPTIONS');
     $obj = $this->getObj();
     if ($id) {
       if ($operation && $ops = $this->operations($id)) {
@@ -95,7 +95,7 @@ abstract class CommexRestResourceBase {
    * {@inheritdoc}
    */
   public function getOptionsFields(array $methods) {
-    $info = [];
+    $info = array();
     $methods = array_intersect($methods, ['GET', 'PATCH', 'POST', 'DELETE']);
     foreach ($methods as $method) {
       if ($method == 'DELETE') {
@@ -123,20 +123,20 @@ abstract class CommexRestResourceBase {
     $result = $obj->view($fieldnames, $expand);
     // Add HATEOAS links where fieldnames haven't been specified.
     if (empty($fieldnames)) {
-      $result['_links'][] = [
+      $result['_links'][] = array(
         'rel' => 'self',
         'href' => $this->uri($id),
         '_comment' => 'this is here for experimentation..'
-      ];
+      );
       if ($operations = $this->operations($id)) {
         foreach ($operations as $op => $label) {
-          $result['_links'][] = [
+          $result['_links'][] = array(
             'label' => (string)$label,//Translate this.
             'rel' => $op,
             'href' => $this->uri($id, $op),
             'confirm' => 'Are you sure?', // This must be overridden translated.
             '_comment' => 'all operations use PUT'
-          ];
+          );
         }
       }
     }
@@ -150,7 +150,7 @@ abstract class CommexRestResourceBase {
     if (!$id) {
       throw  new \Exception('Cannot form uri with empty ID');
     }
-    $parts = [$this->resource];
+    $parts = array($this->resource);
     $parts[] = $id;
     if ($operation) {
       $parts[] = $operation;

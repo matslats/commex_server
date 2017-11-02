@@ -11,46 +11,46 @@ class member extends CommexRestResourceBase {
    * The structure of the member, not translated.
    */
   protected $fields = array(
-    'name' => [
+    'name' => array(
       'fieldtype' => 'CommexFieldText',
       'label' => 'First name & last name',
       'required' => TRUE,
       'sortable' => TRUE
-    ],
-    'mail' => [
+    ),
+    'mail' => array(
       'fieldtype' => 'CommexFieldText',
       'label' => 'Email',
       'required' => TRUE,
       'regex' => '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
-    ],
-    'pass' => [
+    ),
+    'pass' => array(
       'fieldtype' => 'CommexFieldText',
       'label' => 'Password',
       'required' => FALSE
-    ],
-    'phone' => [
+    ),
+    'phone' => array(
       'fieldtype' => 'CommexFieldText',
       'label' => 'Phone',
       'required' => FALSE,
       '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber'
-    ],
+    ),
     'aboutme' => array(
       'fieldtype' => 'CommexFieldText',
       'long' => TRUE,
       'label' => 'What would you do if you had enough money?',
       'required' => FALSE
     ),
-    'street_address' => [
+    'street_address' => array(
       'fieldtype' => 'CommexFieldText',
       'label' => 'Street address',
       'required' => FALSE
-    ],
-    'locality' => [
+    ),
+    'locality' => array(
       'fieldtype' => 'CommexFieldEnum',
       'label' => 'Neighbourhood',
       'required' => TRUE,
       'options_callback' => 'getLocalityOptions'
-    ],
+    ),
     'image' => array(
       // @todo do we need to specify what formats the platform will accept, or what sizes?
       'fieldtype' => 'CommexFieldImage',

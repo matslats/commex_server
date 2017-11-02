@@ -76,7 +76,7 @@ function commex_require($object_name, $shared = TRUE) {
  *
  * @throws \Exception
  */
-function process($method, $resource_type, $id = 0, $operation= '', $query_string = '', array $input = []) {
+function process($method, $resource_type, $id = 0, $operation= '', $query_string = '', array $input = array()) {
   //echo "\n<br />$resource_type $method";
   require_once $_SERVER['DOCUMENT_ROOT'].'/commex/config.php';
   //This allows each endpoint / service potentially to do its own authentication
@@ -100,7 +100,7 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
     header("Access-Control-Allow-Methods: OPTIONS, GET, POST, PATCH, PUT, DELETE");
     // Preflights are NOT authorised
     if (empty($_SERVER['PHP_AUTH_USER'])) {
-      return commex_deliver(200, []);
+      return commex_deliver(200, array());
     }
   }
   $resource_plugin = commex_get_resource_plugin($resource_type);

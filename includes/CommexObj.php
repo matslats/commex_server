@@ -10,18 +10,18 @@
  * Create a CommexObj thus:
  * Declare the fields on the object's type, exluding the id.
  *
- * $field_definitions = [
- *   'name' => [
+ * $field_definitions = array(
+ *   'name' => array(
  *     'type' => 'textfield',
  *     'label' => 'First name & last name',
  *     'required' => TRUE
- *   ],
+ *   ),
  *   'phone' => array(
  *     'type' => 'tel',
  *     'label' => 'Phone',
  *   ],
  *   etc.
- * ]
+ * )
  *
  * Then
  * $obj = new CommexObj($field_definitions);
@@ -95,7 +95,7 @@ final class CommexObj {
   /**
    * Set any given values
    */
-  function set($values, &$errors = []) {
+  function set($values, &$errors = array()) {
     if (isset($values['id'])) {
       $this->id = $values['id'];
     }

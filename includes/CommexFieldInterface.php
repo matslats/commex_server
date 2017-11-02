@@ -3,7 +3,7 @@
 
 interface CommexFieldInterface {
 
-  const API_BASE_INPUT_TYPES = [
+  const API_BASE_INPUT_TYPES = array(
     'textfield',
     'textarea',
     'password',
@@ -13,7 +13,7 @@ interface CommexFieldInterface {
     'checkbox',
     'radios',
     'select'
-  ];
+  );
 
   /**
    * Store the value in the field
@@ -33,7 +33,7 @@ interface CommexFieldInterface {
    *
    * $is_form_method
    *   TRUE if the method is PATCH or POST FALSE if it is GET
-   * 
+   *
    * @return array|null
    */
   public function getFieldDefinition($is_form_method);

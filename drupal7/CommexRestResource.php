@@ -83,7 +83,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
       $entity = entity_load($this->entityTypeId, array($id));
     }
     else {
-      $props = [];
+      $props = array();
       $definition = \Drupal::entityTypeManager()->getDefinition($this->entityTypeId);
       if ($definition->hasKey('bundle')) {
         $props[$definition->getkey('bundle')] = $this->bundle;
@@ -130,17 +130,17 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
               str_replace('public:/', DRUPAL_ROOT .'/'. $class::basePath(), $destination),
               $decoded
             );
-            $values = [
+            $values = array(
               'uid' => \Drupal::currentUser()->id(),
               'status' => 1,
               'uri' => $destination,
               'filesize' => strlen($decoded),
               'filemime' => $mimeType
-            ];
+            );
             $file = \Drupal\file\Entity\File::create($values);
             drupal_chmod($file->getFileUri());
             $file->save();
-            $values = [$fname => $file->id()];
+            $values = array($fname => $file->id());
             $obj->set($values);
           }
         }

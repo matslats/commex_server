@@ -76,7 +76,7 @@ abstract class CommexField implements CommexFieldInterface{
 
   function __construct($definition, CommexObj $commexObj) {
     $this->commexObj = $commexObj;
-    $defaults = [
+    $defaults = array(
       'label' => 0,
       'required' => 0,
       'widget' => '',
@@ -85,7 +85,7 @@ abstract class CommexField implements CommexFieldInterface{
       'filter' => NULL,
       'edit_access' => '',
       'default_callback' => ''
-    ];
+    );
 
     foreach ($defaults as $key => $default_val) {
       $this->{$key} = isset($definition[$key]) ? $definition[$key] : $defaults[$key];

@@ -19,10 +19,10 @@ class CommexFieldNumber extends CommexField {
     if (isset($definition['max'])) {
       $this->max = $definition['max'];
     }
-    $definition += [
+    $definition += array(
       //this is for a floating point number!
       'widget' => 'textfield'
-    ];
+    );
     parent::__construct($definition, $commexObj);
   }
 

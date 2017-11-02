@@ -65,16 +65,16 @@ class member extends CommexRestResource {
         'edit access' => 'selfOrAdmin'
       ),
       'coordinates' => array(
-        'fieldtype' => [
-            'lat' => [
+        'fieldtype' => array(
+            'lat' => array(
               'fieldtype' => 'CommexFieldText',
               'regex' => '^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?)$'
-            ],
-            'lon' => [
+            ),
+            'lon' => array(
               'fieldtype' => 'CommexFieldText',
               'regex' => '^[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$'
-            ],
-        ],
+            ),
+        ),
         'label' => 'Coordinates'
       ),
       'portrait' => array(

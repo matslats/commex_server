@@ -198,7 +198,7 @@ class proposition extends CommexRestResource {
    */
   function operations($id) {
     $proposition = node_load($id);
-    $operations = [];
+    $operations = array();
     if (node_access('update', $node)) {
       if ($smallad->scope->value) {
         $operations['unpublish'] = 'Unpublish';

@@ -29,7 +29,7 @@ class CommexFieldReference extends CommexFieldText {
     $plugin = commex_get_resource_plugin($this->foreignResource);
     $vals = $plugin->loadCommexFields($this->value);
     $obj = $plugin->getObj($vals);
-    return $plugin->view($obj, [], 1);
+    return $plugin->view($obj, array(), 1);
   }
 
   public function getFieldDefinition($is_form_method) {

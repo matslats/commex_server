@@ -151,7 +151,7 @@ function test_field_definitions($resource, $method, $fields) {
       //test_output_error('No label on field '.$id, $method, $resource, $id);
     }
     if ($method == 'GET') {
-      $formats = ['html', 'uri', 'image'];
+      $formats = array('html', 'uri', 'image');
       if (!in_array($def['format'], $formats)) {
         test_output_error('Invalid format '.$def['format'], 'GET-OPTIONS', $resource, $id);
       }
@@ -247,7 +247,7 @@ function test_output_warning($message, $method, $resource, $id = NULL) {
  *   Some default values
  */
 function commex_test_populate_fields(array $field_definitions, $required_fields = TRUE) {
-  $vals = [];
+  $vals = array();
   foreach ($field_definitions as $fieldname => $def) {
     if ((bool)@$def['required'] == $required_fields) {
       // Compound Fields

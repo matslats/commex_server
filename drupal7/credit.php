@@ -19,77 +19,77 @@ class credit extends CommexRestResource {
    * @var array
    */
   function fields() {
-    $fields = [
-      'description' => [
+    $fields = array(
+      'description' => array(
         'label' => 'Description',
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
         'filter' => 'string',
         'edit access' => 'transactionEditAccess'
-      ],
-      'payer' => [
+      ),
+      'payer' => array(
         'label' => 'Payer',
         'fieldtype' => 'CommexFieldReference',
         'required' => TRUE,
         'resource' => 'member',
         'query' => 'fields=name&fragment=',
         'edit access' => 'transactionEditAccess'
-      ],
-      'payee' => [
+      ),
+      'payee' => array(
         'label' => 'Payee',
         'fieldtype' => 'CommexFieldReference',
         'required' => TRUE,
         'resource' => 'member',
         'query' => 'fields=name&fragment=',
         'edit access' => 'transactionEditAccess'
-      ],
-      'category' => [
+      ),
+      'category' => array(
         'label' => 'Category',
         'fieldtype' => 'CommexFieldCategory',
         'filter' => 'getCategoryOptions',
         'edit access' => 'transactionEditAccess'
-      ],
-      'created' => [
+      ),
+      'created' => array(
         'label' => 'Date',
         'fieldtype' => 'CommexFieldVirtual',
         'callback' => 'transactionCreated',
         'sortable' => TRUE,
         'edit access' => 'transactionEditAccess'
-      ],
-      'amount' => [
+      ),
+      'amount' => array(
         'label' => 'Amount',
         'fieldtype' => 'CommexFieldInteger',
         'min' => 0,
         'sortable' => TRUE,
         'edit access' => 'transactionEditAccess'
-      ]
-    ];
+      )
+    );
     // Adjust the amount field to a compound field as necessary
 
     $currency_display = $this->currency()->display;
     if ($currency_display['divisions']) { // make it a compound field
-      $fields['amount'] = [
+      $fields['amount'] = array(
         'label' => 'Amount',
-        'fieldtype' => [$fields['amount']]
-      ];
+        'fieldtype' => array($fields['amount'])
+      );
       unset($fields['amount']['fieldtype'][0]['label']);
 
       switch($currency_display['divisions']) {
         case CURRENCY_DIVISION_MODE_CENTS_INLINE://this won't work ATM as the amount field is an integer
         case CURRENCY_DIVISION_MODE_CENTS_FIELD:
-          $fields['amount']['fieldtype'][1] = [
+          $fields['amount']['fieldtype'][1] = array(
             'fieldtype' => 'CommexFieldInteger',
             'max' => 99,
             'min' => 0,
             'width' => 2
-          ];
+          );
           break;
 
         case CURRENCY_DIVISION_MODE_CUSTOM:
-          $fields['amount']['fieldtype'][1] = [
+          $fields['amount']['fieldtype'][1] = array(
             'fieldtype' => 'CommexFieldEnum',
             'options' => $currency_display['divisions_allowed']
-          ];
+          );
           break;
       }
     }
