@@ -175,7 +175,6 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
           }
         }
       }
-      //header('Last-modified: '. date('D, d M Y H:i:s T', $resource_plugin->lastModified));
       break;
 
     case 'POST':

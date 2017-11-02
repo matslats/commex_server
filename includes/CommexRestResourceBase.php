@@ -3,7 +3,6 @@
 /**
  * @file
  *
- * Public functions, mostly called from index.php
  * Do NOT Modify!
  */
 
@@ -37,9 +36,7 @@ abstract class CommexRestResourceBase {
   protected $deleteConfirm = "Are you sure you want to delete this item?";
 
   /**
-   * Get a commex object for this resource type, optionally populated with the given values.
-   *
-   * @param array $vals
+   * {@inheritdoc}
    */
   public function getObj(array $vals = array()) {
     if (empty($this->object)) {
@@ -51,16 +48,7 @@ abstract class CommexRestResourceBase {
   }
 
   /**
-   * Get the operations the current user can do to the entity with the given ID
-   *
-   * Operations transform the entity without going through an edit form.
-   *
-   * @param type $id
-   *   The id of a resource.
-   *
-   * @return string[]
-   *   an array of operation labels, keyed by a string identifier
-   *
+   * {@inheritdoc}
    */
   function operations($id) {
     $operations = [];
@@ -68,7 +56,7 @@ abstract class CommexRestResourceBase {
   }
 
   /**
-   * Determines which methods are available on the current resources.
+   * {@inheritdoc}
    */
   public function getOptions($id = NULL, $operation = NULL) {
     //we can read the commex object to know about view and edit access.
@@ -104,7 +92,7 @@ abstract class CommexRestResourceBase {
   }
 
   /**
-   * Show which fields are expected for each of the given http methods
+   * {@inheritdoc}
    */
   public function getOptionsFields(array $methods) {
     $info = [];
@@ -121,17 +109,14 @@ abstract class CommexRestResourceBase {
   }
 
   /**
-   * get the values to be injected into the commex object fields
-   * @param string $id
-   *
-   * @note This should be extended every time!
+   * {@inheritdoc}
    */
   function loadCommexFields($id) {
     return array('id' => $id);
   }
 
   /**
-   * Prepare the Commex object for viewing with the client, including the HATEOAS links
+   * {@inheritdoc}
    */
   public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
     $id = $obj->id;
@@ -159,7 +144,7 @@ abstract class CommexRestResourceBase {
   }
 
   /**
-   * Virtual field callback
+   * {@inheritdoc}
    */
   function uri($id, $operation = NULL) {
     if (!$id) {
