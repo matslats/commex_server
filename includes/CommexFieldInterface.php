@@ -3,17 +3,17 @@
 
 interface CommexFieldInterface {
 
-  const API_BASE_INPUT_TYPES = array(
-    'textfield',
-    'textarea',
-    'password',
-    'tel',
-    'image',
-    'date',
-    'checkbox',
-    'radios',
-    'select'
-  );
+  //const API_BASE_INPUT_TYPES = array(
+  //  'textfield',
+  //  'textarea',
+  //  'password',
+  //  'tel',
+  //  'image',
+  //  'date',
+  //  'checkbox',
+  //  'radios',
+  //  'select'
+  //);
 
   /**
    * Store the value in the field

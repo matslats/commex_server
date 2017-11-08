@@ -14,14 +14,12 @@ class CommexFieldInteger extends CommexFieldNumber {
   }
 
   public function setValue($val) {
-    parent::setValue($val);
-    $val += 0;
-    if (!is_integer($val)) {
-      echo $val;
-      throw new \Exception('Non-integer value passed to integer field '.$this->label);
+    $value = $val + 0;
+    if (!is_integer($value)) {
+      throw new \Exception(gettype($val)' value passed to integer field '.$this->label);
     }
+    parent::setValue($value);
   }
-
 
   function __get($prop) {
     return (int)$this->{$prop};

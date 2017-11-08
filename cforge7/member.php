@@ -249,13 +249,14 @@ class member extends CommexRestResource {
       $edit['roles'] = array(RID_TRADER => RID_TRADER);
     }
     $edit['profile_address'] = $account ? $account->profile_address : array();
+    $instance = field_info_instance('user','profile_address',  'user');
     $edit['profile_address'][LANGUAGE_NONE][0] = array(
       'first_name' => $firstname,
       'last_name' => $lastname,
       'name_line' => $obj->name,
       'thoroughfare' => $obj->street_address,
       'dependent_locality' => $obj->locality,
-      'country' => field_info_instance('user','profile_address',  'user')['default_value'][0]['country']
+      'country' => $instance['default_value'][0]['country']
     );
     $edit['phones'][LANGUAGE_NONE][0]['value'] = $obj->phone;
     $edit['aboutme'][LANGUAGE_NONE][0]['value'] = $obj->aboutme;

@@ -96,7 +96,7 @@ abstract class CommexRestResourceBase {
    */
   public function getOptionsFields(array $methods) {
     $info = array();
-    $methods = array_intersect($methods, ['GET', 'PATCH', 'POST', 'DELETE']);
+    $methods = array_intersect($methods, array('GET', 'PATCH', 'POST', 'DELETE'));
     foreach ($methods as $method) {
       if ($method == 'DELETE') {
         $info[$method]['confirm'] = $this->deleteConfirm;

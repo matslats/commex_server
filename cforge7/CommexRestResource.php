@@ -120,10 +120,9 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
             //where to save it?
             $filename = \Drupal::currentUser()->id().REQUEST_TIME .'.'.$fileType;
             //Assumes the commex fieldname is the same as the fieldname on the entity.
-            $settings = \Drupal::service('entity_field.manager')
+            $definitions = \Drupal::service('entity_field.manager')
               ->getFieldDefinitions($this->entityTypeId, $this->bundle)
-              [$fname]
-              ->getSettings();
+            $settings = $definitions[$name]->getSettings();
             $destination = $settings['uri_scheme'] . '://' . $settings['file_directory'] .'/'. $filename;
             $class = $settings['uri_scheme'] == 'public' ? '\Drupal\Core\StreamWrapper\PublicStream' : '\Drupal\Core\StreamWrapper\PrivateStream';
             file_put_contents(

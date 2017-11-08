@@ -25,9 +25,9 @@ class CommexFieldVirtual extends CommexField {
    */
   function structure($method) {
     if ($method == 'GET' or $method == 'HEAD') {
-      return [
+      return array(
         'type' => 'textfield'
-      ];
+      );
     }
   }
   function __get($prop) {

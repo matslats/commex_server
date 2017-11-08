@@ -114,6 +114,8 @@ class credit extends CommexRestResource {
     $query = db_select('mcapi_transactions', 't')
       ->fields('t', array('serial'))
       ->range($offset, $limit);
+    $query->join('field_data_worth', 'w', "t.xid = w.entity_id AND w.entity_type = mcapi_transaction'");
+    $query->condition('w.worth_currcode', $this->currency()->info['currcode']);
     if (!empty($params['state'])) {
       $query->condition('state', $state);
     }
@@ -121,27 +123,23 @@ class credit extends CommexRestResource {
       $query->condition('t.state', array(TRANSACTION_STATE_FINISHED, TRANSACTION_STATE_PENDING), 'IN');
     }
 
-    // todo filter on user NAMES
     if (!empty($params['payer'])) {
-      $query->join('user', 'payer_user', 't.payer = payer_user.uid');
-      $query->condition('payer_user.name', $params['payer']);
+      $query->condition('t.payer', $params['payer']);
     }
     if (!empty($params['payee'])) {
-      $query->join('user', 'payee_user', 't.payee = payee_user.uid');
-      $query->condition('payee_user.name', $params['payee']);
+      $query->condition('t.payee', $params['payer']);
     }
     if (!empty($params['involving'])) {
-      $query->join('user', 'payee_user', 't.payee = payee_user.uid');
-      $query->join('user', 'payer_user', 't.payer = payer_user.uid');
-      $query->orConditionGroup()
-        ->condition('payee_user.name', $params['involving'])
-        ->condition('payer_user.name', $params['involving']);
+      $or = db_or();
+      $or->condition('t.payee', $params['involving'])
+        ->condition('t.payer', $params['involving']);
+      $query->condition($or);
     }
 
     // Filter by name or part-name.
     // @todo use the entity label field and put this is in the base class
     if (!empty($params['fragment'])) {
-      $query->condition('description', params['fragment'].'%', 'LIKE');
+      $query->condition('description', $params['fragment'].'%', 'LIKE');
     }
 
     //sort (optional, string) ... Sort according
@@ -211,7 +209,7 @@ class credit extends CommexRestResource {
     else {
       $fieldData['amount'] = explode('.', $worth['quantity']);
     }
-    if ($items = field_get_items('mcapi_transaction', $transaction, variable_get('transaction_description_field', ''))) {
+    if ($items = field_get_items('transaction', $transaction, variable_get('transaction_description_field', ''))) {
       $fieldData['description'] = $items[0]['value'];
     }
     //prepare non-virtual CommexField values from the native entity
@@ -287,7 +285,8 @@ class credit extends CommexRestResource {
   /**
    * Get the first currency, assuming that's the one the app uses
    *
-   * @return Currency
+   * @return stdClass
+   *   A ctools currency
    */
   private function currency() {
     return currency_load();

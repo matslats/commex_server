@@ -28,7 +28,7 @@ class CommexFieldNumber extends CommexField {
 
   public function setValue($val) {
     if (!is_numeric($val)) {
-      throw new \Exception('Not a number: '.gettype($val) .' '. $val);
+      throw new \Exception(gettype($val) .' is not a number in field '.$this->label);
     }
     // Convert the type into a number
     $val += 0;

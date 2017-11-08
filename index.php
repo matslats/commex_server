@@ -53,11 +53,16 @@ process(
 function commex_require($object_name, $shared = TRUE) {
   global $framework;
   if ($shared) {
-    require_once 'includes/'.$object_name.'.php';
+    $file = 'includes/'.$object_name.'.php';
   }
   else {
-    require_once $framework.'/'.$object_name.'.php';
+    $file = $framework.'/'.$object_name.'.php';
   }
+  if (file_exists($file)) {
+    require_once($file);
+    return;
+  }
+  commex_deliver(500, 'Unable to load file '.$file);
 }
 
 /**
@@ -77,7 +82,6 @@ function commex_require($object_name, $shared = TRUE) {
  * @throws \Exception
  */
 function process($method, $resource_type, $id = 0, $operation= '', $query_string = '', array $input = array()) {
-  //echo "\n<br />$resource_type $method";
   require_once $_SERVER['DOCUMENT_ROOT'].'/commex/config.php';
   //This allows each endpoint / service potentially to do its own authentication
   if (!$resource_type) {
@@ -121,7 +125,7 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
       }
     }
     elseif ($method == 'OPTIONS') {
-      return commex_deliver(200, ['POST']);
+      return commex_deliver(200, array('POST'));
     }
     else {
       return commex_deliver(405, 'Method not allowed.');
@@ -230,7 +234,11 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
 
 function commex_json_input() {
   $input = file_get_contents('php://input');
-  return (array)json_decode($input);
+  $php = json_decode($input);
+  if ($input and empty($php)) {
+    commex_deliver(400, 'Unable to parse http body input');
+  }
+  return (array)$php;
 }
 
 /**
@@ -241,6 +249,9 @@ function commex_get_resource_plugin($resource_type) {
 
   commex_require('CommexRestResourceInterface', TRUE);
   commex_require('CommexRestResource', FALSE);
+  if (!isset($endpoints[$resource_type])) {
+    commex_deliver(404, 'Unknown endpoint: '.$resource_type);
+  }
   $classname = isset($endpoints[$resource_type]) ? $endpoints[$resource_type] : $resource_type;
   commex_require($classname, FALSE);
   $class = new $classname();
@@ -279,7 +290,7 @@ function commex_json_deliver($status_code, $content = '') {
   header('Status: '. $status_code);
   switch ($status_code) {
     case 404:
-      $output = array("error" => "404 Not found");
+      $output = array("error" => $content ?: "404 Not found");
       break;
 
     case 403:
@@ -288,6 +299,7 @@ function commex_json_deliver($status_code, $content = '') {
 
     case 200:
     case 201:
+    case 204:
       $output = $content;
       break;
 

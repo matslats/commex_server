@@ -25,6 +25,17 @@ class CommexFieldDate extends CommexFieldInteger {
     // The API specified unixtime dates so this not needed.
     return date('d-M-Y', $this->value);
   }
+  
+  public function setValue($value) {
+    if (!is_numeric($value)) {
+      $val = strtotime($value);
+      if (empty($val)) {
+        throw new \Exception('Php strtotime unable to parse date: '.$value);
+      }
+      $value = $val;
+    }
+    parent::setValue($value);
+  }
 
   public function getFieldDefinition($is_form_method) {
     if ($props = parent::getFieldDefinition($is_form_method)) {

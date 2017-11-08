@@ -169,7 +169,7 @@ final class CommexObj {
    *   Field definitions, keyed by field name
    */
   function getFieldDefinitions($method, $fieldnames = NULL) {
-    $is_form_method = in_array($method, ['POST', 'PATCH']);
+    $is_form_method = in_array($method, array('POST', 'PATCH'));
     $defs = array();
     foreach ($this->fields as $name => $field) {
       if ($name == 'id' or ($fieldnames && !in_array($name, $fieldnames))) {

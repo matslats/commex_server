@@ -21,9 +21,7 @@ class Transaction extends CommexRestResource {
    * @var array
    */
   function fields() {
-    $currencies = Currency::loadMultiple();
-    $currency = reset($currencies);
-    $format = $currency->format;
+    $format = $this->currency()->format;
     $fields = [
       'description' => [
         'label' => 'Description',
@@ -58,45 +56,46 @@ class Transaction extends CommexRestResource {
         'sortable' => TRUE,
       ],
     ];
-
-    // Adjust the amount field to a compound field as necessary
-    if ($format[3]) {// make it a compound field
-      $fields['amount'] = [
-        'label' => 'Amount',
-        'fieldtype' => [$fields['amount']],
-        'required' => TRUE,
-      ];
-      unset($fields['amount']['fieldtype'][0]['label'], $fields['amount']['fieldtype'][0]['required']);
-    }
-    if ($format[3] == '99') {
-      $fields['amount']['fieldtype'][1] = [
-        'fieldtype' => 'CommexFieldInteger',
-        'max' => 99,
-        'min' => 0,
-        'width' => 2,
-      ];
-    }
-    // Special case for hours
-    elseif($format[3] == '59/4') {
-      $fields['amount']['fieldtype'][1] = [
-        'fieldtype' => 'CommexFieldEnum',
-        'options' => [
-          '0' => '00',
-          '15' => '15 mins',
-          '30' => '30 mins',
-          '45' => '45 mins',
-        ]
-      ];
-    }
-    elseif (strpos($format[3], '/')) {
-      $fields['amount']['fieldtype'][1]['fieldtype'] = 'CommexFieldEnum';
-      list($total, $divisor) = explode('/', $format[3]);
-      $total++;
-      $chunk = $total/$divisor;
-      $fields['amount']['fieldtype'][1]['options'][0] = "00";
-      for ($i=1; $i < $divisor; $i++) {
-        $val = $chunk*$i;
-        $fields['amount']['fieldtype'][1]['options'][$val] = $val;
+    if (isset($format[3])) {
+      // Adjust the amount field to a compound field as necessary
+      if ($format[3]) {// make it a compound field
+        $fields['amount'] = [
+          'label' => 'Amount',
+          'fieldtype' => [$fields['amount']],
+          'required' => TRUE,
+        ];
+        unset($fields['amount']['fieldtype'][0]['label'], $fields['amount']['fieldtype'][0]['required']);
+      }
+      if ($format[3] == '99') {
+        $fields['amount']['fieldtype'][1] = [
+          'fieldtype' => 'CommexFieldInteger',
+          'max' => 99,
+          'min' => 0,
+          'width' => 2,
+        ];
+      }
+      // Special case for hours
+      elseif($format[3] == '59/4') {
+        $fields['amount']['fieldtype'][1] = [
+          'fieldtype' => 'CommexFieldEnum',
+          'options' => [
+            '0' => '00',
+            '15' => '15 mins',
+            '30' => '30 mins',
+            '45' => '45 mins',
+          ]
+        ];
+      }
+      elseif (strpos($format[3], '/')) {
+        $fields['amount']['fieldtype'][1]['fieldtype'] = 'CommexFieldEnum';
+        list($total, $divisor) = explode('/', $format[3]);
+        $total++;
+        $chunk = $total/$divisor;
+        $fields['amount']['fieldtype'][1]['options'][0] = "00";
+        for ($i=1; $i < $divisor; $i++) {
+          $val = $chunk*$i;
+          $fields['amount']['fieldtype'][1]['options'][$val] = $val;
+        }
       }
     }
     return $fields;
@@ -160,7 +159,7 @@ class Transaction extends CommexRestResource {
           $values['category'][] = $val['target_id'];
         }
       }
-      if (empty($this->fields()['category']['multiple'])) {
+      if (empty($this->fields()['category']['multiple'])and is_array($values['category'])) {
         $values['category'] = reset($values['category']);
       }
       return $values;
@@ -239,12 +238,8 @@ class Transaction extends CommexRestResource {
    * {@inheritdoc}
    */
   protected function translateToEntity(CommexObj $obj, ContentEntityInterface $transaction) {
-    // We don't any more have a way to choose which currency by configuration
-    $currencies = Currency::loadMultiple();
-    $currency = reset($currencies);
-
+    $currency = $this->currency();
     list($vals[1],$vals[3]) = $obj->amount;
-
     $transaction->worth->setValue(['curr_id' => $currency->id(), 'value' => $currency->unformat($vals)]);
     $transaction->description->value = $obj->description;
 
@@ -258,6 +253,7 @@ class Transaction extends CommexRestResource {
    */
   public function getList(array $params, $offset, $limit) {
     $query = $this->getListQuery($params, $offset, $limit);
+    $query->condition('worth.curr_id', $this->currency()->id());
 
     if (isset($params['fragment'])) {
       $query->condition('description', $params['fragment'].'%', 'LIKE');
@@ -322,6 +318,16 @@ class Transaction extends CommexRestResource {
       // Assume success
       return TRUE;
     }
+  }
+
+  /**
+   * return Currency
+   */
+  private function currency() {
+    // We don't have a way to choose which currency by configuration.
+    $currencies = Currency::loadMultiple();
+    $currencies = Currency::loadMultiple();
+    return reset($currencies);
   }
 }
 

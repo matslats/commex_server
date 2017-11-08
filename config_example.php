@@ -11,7 +11,7 @@
  */
 global $framework, $endpoints;
 
-$framework = 'drupal8';
+$framework = 'cforge8';
 
 $endpoints = array(
   //endpoint => classname

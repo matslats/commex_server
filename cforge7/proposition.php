@@ -80,9 +80,9 @@ class proposition extends CommexRestResource {
       $node->type = 'proposition';
       node_object_prepare($node);
     }
-
+    global $language;
     $node->title = $obj->title;
-    $node->body[LANGUAGE_NONE][0]['value'] = $obj->description;
+    $node->body[$language->language][0]['value'] = $obj->description;
     $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'] = $obj->category;
     $node->want = $this->resource == 'want';
     $node->end = $obj->expires;
@@ -101,9 +101,10 @@ class proposition extends CommexRestResource {
    */
   function loadCommexFields($id) {
     $node = node_load($id);
+    $body = field_view_field('node', $node, 'body');
     $fieldData = parent::loadCommexFields($id) + array(
       'title' => $node->title,
-      'description' => $node->body[LANGUAGE_NONE][0]['value'],//when do we sanitise this
+      'description' => $body[0]['#markup'],
       'user_id' => $node->uid,//
       'expires' => $node->end,
       'category' => $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'], // Just the first
@@ -164,6 +165,9 @@ class proposition extends CommexRestResource {
       $query->join('users', 'u', 'u.uid = n.uid');
       $query->join('field_data_profile_address', 'a', "a.entity_id = u.uid AND a.entity_type = 'user'");
       $query->condition('a.profile_address_dependent_locality', $params['locality']);
+    }
+    if (!empty($params['user_id'])) {
+      $query->condition('n.uid', $params['user_id']);
     }
 
     // @todo Could this be move to the base class?
@@ -259,6 +263,15 @@ class proposition extends CommexRestResource {
    */
   function defaultExpiryDate() {
     return strtotime(variable_get('offers_wants_default_expiry', '+1 year'));
+  }
+
+
+  /**
+   * {@inheritdoc}
+   */
+  public function delete($nid) {
+    node_delete($nid);
+    return !node_load($nid);
   }
 
 }
