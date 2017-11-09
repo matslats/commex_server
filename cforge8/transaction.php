@@ -143,6 +143,7 @@ class Transaction extends CommexRestResource {
       $currency = $transaction->worth->first()->currency;
       $amount = $currency->formattedParts($transaction->worth->first()->value);
       if (count($amount) == 1) {
+        // This is not a compound field, so requires a single value
         $amount = reset($amount);
       }
       $values = parent::loadCommexFields($id) + [

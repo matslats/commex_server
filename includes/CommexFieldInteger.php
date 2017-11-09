@@ -16,7 +16,7 @@ class CommexFieldInteger extends CommexFieldNumber {
   public function setValue($val) {
     $value = $val + 0;
     if (!is_integer($value)) {
-      throw new \Exception(gettype($val)' value passed to integer field '.$this->label);
+      throw new \Exception(gettype($val).' value passed to integer field '.$this->label);
     }
     parent::setValue($value);
   }

@@ -229,4 +229,11 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
 
   public function operate($id, $operation) {}
 
+
+  protected function extractImgsFromField($items, $image_style_name) {
+    $html = \Drupal::service('renderer')->renderRoot($items->view(['image_style' => $image_style_name]));
+    preg_match_all('/(<img [^>]*?>)/', $html, $matches);
+    return implode($matches[1]);
+  }
+
 }

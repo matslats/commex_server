@@ -120,22 +120,24 @@ class Member extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-    if ($user = User::load($id)) {
-      $values = parent::loadCommexFields($id) + [
-        'name' => $user->getDisplayName(),
-        'mail' => $user->getEmail(),
-        'locality' => $user->address->dependent_locality,
-        'street_address' => $user->address->address_line1,
-        'aboutme' => $user->notes->value,
-        'phone' => $user->phones->value,
-        // I imagine there is a more concise way than this
-        // view() is required to load in the default image.
-        'portrait' => \Drupal::service('renderer')->renderRoot($user->user_picture->view())
-      ];
-      return $values;
+    $user = User::load($id);
+    if (!$user) {
+      throw new Exception('Unknown user ID: '.$id);
     }
-    throw new Exception('Unknown user ID: '.$id);
+    $values = parent::loadCommexFields($id) + [
+      'name' => $user->getDisplayName(),
+      'mail' => $user->getEmail(),
+      'locality' => $user->address->dependent_locality,
+      'street_address' => $user->address->address_line1,
+      'aboutme' => $user->notes->value,
+      'phone' => $user->phones->value,
+      // I imagine there is a more concise way than this
+      // view() is required to load in the default image.
+      'portrait' => $this->extractImgsFromField($user->user_picture, 'thumbnail')
+    ];
+    return $values;
   }
+
 
   /**
    * {@inheritdoc}
