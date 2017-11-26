@@ -76,7 +76,7 @@ class Wallet {
    * @return boolean
    */
   public function authenticate($username, $password) {
-    include_once 'resources/CommexRestResourceBase.php';
+    commex_include('CommexRestResourceBase', TRUE);
     return CommexRestresource::authenticate($username, $password);
   }
 }

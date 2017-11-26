@@ -22,24 +22,21 @@ class Want extends CommexRestResource {
       'title' => [
         'label' => 'Headline',
         'fieldtype' => 'CommexFieldText',
-        'required' => TRUE,
-        'edit access' => 'currentOrAdmin'
+        'required' => TRUE
       ],
       'description' => [
         'label' => 'Full description',
         'fieldtype' => 'CommexFieldText',
         'long' => TRUE,
-        'required' => FALSE,
-        'edit access' => 'currentOrAdmin'
+        'required' => FALSE
       ],
       'user_id' => [
         'label' => 'Owner',
         'fieldtype' => 'CommexFieldReference',
+        'reference' => 'member.name',
         'required' => FALSE,
-        'default_callback' => 'currentUser',
-        'resource' => 'member',
-        'reffield' => 'name',
-        'edit access' => 'adminOnly',
+        'default_callback' => 'currentUserId',
+        'edit_access' => 'adminOnly',
         //'query' => 'fields=name&fragment=',
         '_comment' => 'defaults to the current user'
       ],
@@ -49,7 +46,6 @@ class Want extends CommexRestResource {
         'default_callback' => 'defaultExpiryDate',
         'min' => 'today:add:1:day',
         'max' => 'today:add:1:year',
-        'edit access' => 'currentOrAdmin',
         'required' => FALSE,
         'sortable' => TRUE,
       ],
@@ -62,8 +58,7 @@ class Want extends CommexRestResource {
       'category' => array(
         'label' => 'Category',
         'fieldtype' => 'CommexFieldCategory',
-        'required' => TRUE,
-        'edit access' => 'currentOrAdmin'
+        'required' => TRUE
       )
     ];
     return $fields;
@@ -202,34 +197,6 @@ class Want extends CommexRestResource {
   }
 
   /**
-   * Field access callback
-   *
-   * Determine whether a field on a populated commex Object is editable by the current user
-   *
-   * @param string $id
-   *   The id of the want, if applicable
-   *
-   * @return bool
-   *   TRUE if acces is granted
-   */
-  public function currentOrAdmin($id = 0) {
-    static $result = NULL;
-    if (!is_bool($result)) {
-      $account = \Drupal::currentUser();
-      if ($account->hasPermission('edit all smallads')) {
-        $result = TRUE;
-      }
-      elseif (is_null($id)) { // POST
-        return TRUE;
-      }
-      else {// PATCH
-        $result = $id == $account->id();
-      }
-    }
-    return $result;
-  }
-
-  /**
    * Field default callback
    */
   function currentUserTarget() {
@@ -238,7 +205,7 @@ class Want extends CommexRestResource {
   /**
    * Field default callback
    */
-  function currentUser() {
+  function currentUserId() {
     return \Drupal::currentUser()->id();
   }
 
@@ -254,6 +221,31 @@ class Want extends CommexRestResource {
    */
   function changedDate() {
     return date('d-M-Y', strtotime(\Drupal::config('smallads.settings')->get('default_expiry')));
+  }
+
+  /**
+   * Field access callback
+   *
+   * Determine whether a field on a populated commex Object is editable by the current user
+   *
+   * @param string $id
+   *   The id of the want, if applicable
+   *
+   * @return bool
+   *   TRUE if acces is granted
+   */
+  public function ownerOrAdmin() {
+    static $result = NULL;
+    if (is_null($result)) {
+      $account = \Drupal::currentUser();
+      if ($account->hasPermission('edit all smallads')) {
+        $result = TRUE;
+      }
+      else {// PATCH
+        $result = $this->object->user_id == $account->id();
+      }
+    }
+    return $result;
   }
 
 }

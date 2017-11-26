@@ -143,6 +143,9 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
     case 'GET':
     case 'HEAD':
       parse_str(@$query_string, $query);
+      if (isset($params['fragment'])) {
+        $params['fragment'] = urldecode($params['fragment']);
+      }
       $fieldnames = isset($query['fields']) ? explode(',',$query['fields']) : array();
       $offset = isset($query['offset']) ? $query['offset'] : 0;
       $limit = isset($query['limit']) ? $query['limit'] : 10;
@@ -234,11 +237,14 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
 
 function commex_json_input() {
   $input = file_get_contents('php://input');
-  $php = json_decode($input);
-  if ($input and empty($php)) {
+  $body_array = (array)json_decode($input);
+  if ($input and empty($body_array)) {
     commex_deliver(400, 'Unable to parse http body input');
   }
-  return (array)$php;
+  foreach ($body_array as $key => &$val) {
+    $body_array[$key] = html_entity_decode($val);
+  }
+  return $body_array;
 }
 
 /**
@@ -316,8 +322,6 @@ function commex_json_deliver($status_code, $content = '') {
   print json_encode($output, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT);
   exit;
 }
-
-
 
 /**
  * Custom exception handler callback

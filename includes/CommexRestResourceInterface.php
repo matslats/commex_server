@@ -151,4 +151,16 @@ interface CommexRestResourceInterface {
    */
   public function view(CommexObj $obj, array $fieldnames = array(), $expand = FALSE);
 
+ /**
+   * Field access callback
+   *
+   * Determine whether a field on a populated commex Object is editable by the current user
+   *
+   * @param string $id
+   *   The id of the offer, if applicable
+   *
+   * @return bool
+   *   TRUE if the current user owns the resource OR can administer it.
+   */
+  function ownerOrAdmin();
 }

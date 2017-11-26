@@ -21,50 +21,45 @@ class member extends CommexRestResource {
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
         'sortable' => TRUE,
-        'filter' => 'string',
-        'edit access' => 'selfOrAdmin'
+        'filter' => 'string'
       ),
       'mail' => array(
         'label' => 'Email',
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
-        'regex' => '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
-        'edit access' => 'selfOrAdmin'
+        'regex' => '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
       ),
       'pass' => array(
         'label' => 'Password',
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
-        'edit access' => 'selfOrAdmin'
+        'view access' => 'selfOrAdmin'
       ),
       'phone' => array(
         'label' => 'Phone',
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
-        '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber',
-        'edit access' => 'selfOrAdmin'
+        '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber'
       ),
       'aboutme' => array(
         'label' => 'What would you do if you had enough money?',
         'fieldtype' => 'CommexFieldText',
         'long' => TRUE,
-        'required' => FALSE,
-        'edit access' => 'selfOrAdmin'
+        'required' => FALSE
       ),
       'street_address' => array(
         'label' => 'Street address',
         'fieldtype' => 'CommexFieldText',
-        'required' => FALSE,
-        'edit access' => 'selfOrAdmin'
+        'required' => FALSE
       ),
       'locality' => array(
         'label' => 'Neighbourhood',
         'fieldtype' => 'CommexFieldEnum',
         'required' => TRUE,
-        'options_callback' => 'getLocalityOptions',
-        'edit access' => 'selfOrAdmin'
+        'options_callback' => 'getLocalityOptions'
       ),
       'coordinates' => array(
+        'label' => 'Coordinates',
         'fieldtype' => array(
             'lat' => array(
               'fieldtype' => 'CommexFieldText',
@@ -74,14 +69,12 @@ class member extends CommexRestResource {
               'fieldtype' => 'CommexFieldText',
               'regex' => '^[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$'
             ),
-        ),
-        'label' => 'Coordinates'
+        )
       ),
       'portrait' => array(
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
-        'label' => 'Portrait',
-        'edit access' => 'selfOrAdmin'
+        'label' => 'Portrait'
       ),
       'balance' => array(
         'fieldtype' => 'CommexFieldVirtual',
@@ -193,7 +186,9 @@ class member extends CommexRestResource {
    */
   public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
     $fields = parent::view($obj, $fieldnames, $expand);
-    unset($fields['mail'], $fields['pass']);
+    if (is_array($fields)) {
+      unset($fields['mail'], $fields['pass']);
+    }
     return $fields;
   }
 
@@ -299,12 +294,10 @@ class member extends CommexRestResource {
   }
 
   /**
-   * Field access callback
-   *
+   * {@inheritdoc}
    */
-  function selfOrAdmin($uid) {
-    $current_user = $GLOBALS['user'];
-    return !empty($current_user->roles[RID_COMMITTEE]) or $uid = $current_user->uid;
+  function ownerOrAdmin() {
+    return !empty($GLOBALS['user']->roles[RID_COMMITTEE]) or $this->object->id == $GLOBALS['user']->uid;
   }
 
 }

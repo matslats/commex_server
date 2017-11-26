@@ -18,7 +18,6 @@ class proposition extends CommexRestResource {
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
         'filter' => TRUE,
-        'edit access' => 'ownerOrAdmin'
       ),
       'description' => array(
         'label' => 'Full description',
@@ -26,17 +25,15 @@ class proposition extends CommexRestResource {
         'long' => TRUE,
         'required' => FALSE,
         'filter' => TRUE,
-        'edit access' => 'ownerOrAdmin'
       ),
       'user_id' => array(
         'label' => 'Owner',
         'fieldtype' => 'CommexFieldReference',
+        'reference' => 'member.name',
         'default' => 'currentUserId',
         'required' => FALSE,
-        'resource' => 'member',
-        'query' => 'fields=name&fragment=',
         'filter' => TRUE,
-        'edit access' => 'isAdmin',
+        'edit_access' => 'isAdmin',
         '_comment' => 'defaults to the current user',
       ),
       'expires' => array(
@@ -47,7 +44,6 @@ class proposition extends CommexRestResource {
         'max' => 'today:add:1:year',
         'required' => FALSE,
         'sortable' => TRUE,
-        'edit access' => 'ownerOrAdmin'
       ),
       'category' => array(
         'label' => 'Category',
@@ -55,7 +51,6 @@ class proposition extends CommexRestResource {
         'options_callback' => 'getCategoryOptions',
         'required' => TRUE,
         'filter' => 'getCategoryOptions',
-        'edit access' => 'ownerOrAdmin'
       )
     );
   }
@@ -79,16 +74,20 @@ class proposition extends CommexRestResource {
       $node = new stdClass();
       $node->type = 'proposition';
       node_object_prepare($node);
+      unset($node->menu);
     }
     global $language;
     $node->title = $obj->title;
-    $node->body[$language->language][0]['value'] = $obj->description;
+    $node->body[$language->language][0] = array(
+      'value' => $obj->description,
+      'format' => 'editor_filtered_html'
+    );
     $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'] = $obj->category;
     $node->want = $this->resource == 'want';
     $node->end = $obj->expires;
     $node->uid = $obj->user_id;
-    if ($obj->image) {
-      $node->image[LANGUAGE_NONE][0]['value'] = $obj->image;
+    if (property_exists($obj, 'image') and $img = $obj->image) {
+      $node->image[LANGUAGE_NONE][0]['value'] = $img;
     }
     node_save($node);
     $obj->id = $node->nid;
@@ -138,7 +137,7 @@ class proposition extends CommexRestResource {
     //Set the commex permissions
     $this->object->viewable = TRUE;
     $this->object->creatable = TRUE;
-    $this->object->deletable = $this->ownerOrAdmin($this->object->id);
+    $this->object->deletable = $this->ownerOrAdmin();
     //editable is handled field by field
     return $this->object;
   }
@@ -158,7 +157,11 @@ class proposition extends CommexRestResource {
 
     // Filter by name or part-name.
     if (!empty($params['fragment'])) {
-      $query->condition('n.title', $params['fragment'].'%', 'LIKE');
+      $query->join('field_data_body', 'b', 'b.revision_id = n.vid');
+      $condition = db_or()
+        ->condition('n.title', '%'.$params['fragment'].'%', 'LIKE')
+        ->condition('b.body_value', '%'.$params['fragment'].'%', 'LIKE');;
+      $query->condition($condition);
     }
     // Filter by locality of the owner
     if (!empty($params['locality'])) {
@@ -233,15 +236,14 @@ class proposition extends CommexRestResource {
   /**
    * Field access callback
    */
-  function ownerOrAdmin($nid) {
-    $node = node_load($nid);
-    return $this->isAdmin() or $node->uid = $GLOBALS['user']->uid;
+  function ownerOrAdmin() {
+    return $this->isAdmin() or $this->object->user_id = $GLOBALS['user']->uid;
   }
 
   /**
    * {@inheritdoc}
    */
-  function isAdmin() {
+  private function isAdmin() {
     return !empty($GLOBALS['user']->roles[RID_COMMITTEE]);
   }
 

@@ -4,7 +4,7 @@ use Drupal\user\Entity\User;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\image\Entity\ImageStyle;
 
-//Otherwise the bootstrapped drupal thinks it is in the wrong directory
+//Otherwise the bootstrapped Drupal thinks it is in the wrong directory
 $GLOBALS['base_url'] = dirname($GLOBALS['base_url']);
 commex_require('CommexRestResourceBase', TRUE);
 
@@ -12,7 +12,6 @@ commex_require('CommexRestResourceBase', TRUE);
  * Base plugin for Commex resources.
 */
 abstract class CommexRestResource extends CommexRestResourceBase implements CommexRestResourceInterface {
-
 
   /**
    * The module configuration object
@@ -34,22 +33,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    * @var Drupal\Core\Entity\Query\QueryFactory
    */
   protected $entityQueryFactory;
-
-  /**
-   * Get a commex object for this resource type, optionally populated with the given values.
-   *
-   * @param array $vals
-   *
-   * @return CommexObj
-   */
-  public function getObj(array $vals = array()) {
-    if (empty($this->object)) {
-      commex_require('CommexObj', TRUE);
-      $this->object = new CommexObj($this);
-    }
-    return $this->object->set($vals);
-  }
-
 
   /**
    * {@inheritdoc}
@@ -190,7 +173,8 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     }
     return (bool)$uid;
   }
-    /**
+
+  /**
    * Creates an EntityQuery and adds conditions common to some resources.
    *
    * Namely $offset, $limit, geo, category
@@ -200,10 +184,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    * @param int $limit
    *
    * @return EntityQuery
-   *
-   * @note
    */
-
   final protected function getListQuery(array $params, $offset, $limit) {
     $query = \Drupal::entityQuery($this->entityTypeId);
     if (empty($limit)) {
@@ -230,10 +211,26 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
   public function operate($id, $operation) {}
 
 
-  protected function extractImgsFromField($items, $image_style_name) {
-    $html = \Drupal::service('renderer')->renderRoot($items->view(['image_style' => $image_style_name]));
-    preg_match_all('/(<img [^>]*?>)/', $html, $matches);
-    return implode($matches[1]);
+  /**
+   * Take a rendered entity image field and just extract the url(s)
+   *
+   * @param FieldItems $items
+   * @param string $image_style_name
+   * @param bool $multiple
+   *
+   * @return string[]
+   */
+  protected function extractImgsFromField($items, $image_style_name, $multiple = FALSE) {
+    $renderable = $items->view(['image_style' => $image_style_name]);
+    $html = \Drupal::service('renderer')->renderRoot($renderable);
+    $pattern = '/src="(http[^"]*?")/';
+    if ($multiple) {
+      preg_match_all($pattern, $html, $matches);
+    }
+    else {
+      preg_match($pattern, $html, $matches);
+    }
+    return $matches[1] ?: '';
   }
 
 }

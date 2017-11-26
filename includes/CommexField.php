@@ -62,7 +62,7 @@ abstract class CommexField implements CommexFieldInterface{
   /**
    * @var Bool TRUE if the current user can view this field
    */
-  public $viewable;
+  public $view_access;
 
   /**
    * @var Bool TRUE if the current user can delete this field
@@ -83,12 +83,13 @@ abstract class CommexField implements CommexFieldInterface{
       'format' => 'html',
       'sortable' => 0,
       'filter' => NULL,
-      'edit_access' => '',
+      'edit_access' => 'ownerOrAdmin',
+      'view_access' => TRUE,
       'default_callback' => ''
     );
 
     foreach ($defaults as $key => $default_val) {
-      $this->{$key} = isset($definition[$key]) ? $definition[$key] : $defaults[$key];
+      $this->{$key} = isset($definition[$key]) ? $definition[$key] : $default_val;
     }
     if ($this->default_callback) {
       $this->setValue($commexObj->resourcePlugin->{$this->default_callback}());
@@ -148,15 +149,14 @@ abstract class CommexField implements CommexFieldInterface{
    * @return array|null
    */
   public function getFieldDefinition($is_form_method) {
-    if ($this->label) {
-      $props['label'] = $this->label;
-    }
+    $props = array();
     if ($is_form_method) {
       // Show the field:
       //   If the object already exists and is exitable
       //   if the object doesn't exist
       //only show the widgets if this field is editable
 
+      $props['label'] = $this->label;
       if ($this->editable()) {
         $props['type'] = $this->widget;
         $props['required'] = $this->required ?: 0;
@@ -165,7 +165,8 @@ abstract class CommexField implements CommexFieldInterface{
         }
       }
     }
-    else {
+    elseif ($this->viewable()) {
+      $props['label'] = $this->label;
       $props['format'] = $this->format;
       $props['sortable'] = $this->sortable;
       if ($this->filter) {
@@ -185,11 +186,12 @@ abstract class CommexField implements CommexFieldInterface{
     // For existing objects
     if ($this->commexObj->id) {
       if ($this->edit_access) {
-        if ($this->commexObj->resourcePlugin->{$this->edit_access}($this->commexObj->id)) {
-          return TRUE;
+        if ($this->commexObj->id) {
+          return $this->commexObj->resourcePlugin->{$this->edit_access}();
         }
         else {
-          return FALSE;
+          //There is no object, therefore this field CAN be posted
+          return TRUE;
         }
       }
       else {
@@ -201,6 +203,18 @@ abstract class CommexField implements CommexFieldInterface{
     elseif (empty($this->commexObj->id)) {
       //this field is editable if the default value has not been set
       return is_null($this->value);
+    }
+  }
+
+  function viewable() {
+    if (is_string($this->view_access)) {
+      return call_user_func_array(
+        array($this->commexObj->resourcePlugin, $this->view_access),
+        array($this->commexObj->id)
+      );
+    }
+    else {
+      return $this->view_access;
     }
   }
 }

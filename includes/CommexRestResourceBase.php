@@ -39,11 +39,11 @@ abstract class CommexRestResourceBase {
    * {@inheritdoc}
    */
   public function getObj(array $vals = array()) {
-    if (empty($this->object)) {
-      commex_require('CommexObj', TRUE);
-      $this->object = new CommexObj($this);
+    commex_require('CommexObj', TRUE);
+    $this->object = new CommexObj($this);
+    if ($vals) {
+      $this->object->set($vals);
     }
-    $this->object->set($vals);
     return $this->object;
   }
 
@@ -126,7 +126,6 @@ abstract class CommexRestResourceBase {
       $result['_links'][] = array(
         'rel' => 'self',
         'href' => $this->uri($id),
-        '_comment' => 'this is here for experimentation..'
       );
       if ($operations = $this->operations($id)) {
         foreach ($operations as $op => $label) {

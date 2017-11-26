@@ -111,14 +111,11 @@ final class CommexObj {
     }
     foreach ($this->getFields() as $name => $field) {
       // If any one field is editable, this object is editable.
-      if (!$this->editable && $field->editable()) {
+      if ($field->editable()) {
         $this->editable = TRUE;
       }
-      if ($callback = @$definition['view access']) {
-        $field->viewable = $this->resourcePlugin->$callback($this);
-      }
-      else $field->viewable = TRUE;
-      if ($field->viewable) {
+      // If any one field is viewable, this object is editable.
+      if ($field->viewable()) {
         $this->viewable = TRUE;
       }
     }
@@ -142,11 +139,9 @@ final class CommexObj {
       }
       else {
         $field = $this->fields[$field_name];
+        $output[$field_name] = $field->view();
         if ($expand and ($field instanceOf CommexFieldReference)) {
-          $output[$field_name] = $field->expand();
-        }
-        else {
-          $output[$field_name] = $field->view();
+          $output[$field_name.'_ref'] = $field->expand();
         }
       }
     }

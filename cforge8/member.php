@@ -25,28 +25,25 @@ class Member extends CommexRestResource {
         'label' => 'First name & last name',
         'required' => TRUE,
         'sortable' => TRUE,
-        'filter' => TRUE,
-        'edit_access' => 'ownerOrAdmin',
+        'filter' => TRUE
       ],
       'mail' => [
         'fieldtype' => 'CommexFieldEmail',
         'label' => 'Email',
         'required' => TRUE,
-        'filter' => TRUE,
-        'edit_access' => 'ownerOrAdmin',
+        'filter' => TRUE
       ],
       'pass' => [
         // todo do we need a default random password?
         'fieldtype' => 'CommexFieldText',
         'label' => 'Password',
         'required' => FALSE,
-        'edit_access' => 'ownerOrAdmin',
+        'view_access' => FALSE
       ],
       'phone' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Phone',
         'required' => FALSE,
-        'edit_access' => 'ownerOrAdmin',
         '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber',
       ],
       'aboutme' => array(
@@ -54,13 +51,11 @@ class Member extends CommexRestResource {
         'lines' => 4,
         'label' => 'What would you do if you had enough money?',
         'required' => FALSE,
-        'edit_access' => 'ownerOrAdmin',
       ),
       'street_address' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Street address',
         'required' => FALSE,
-        'edit_access' => 'ownerOrAdmin',
       ],
       'locality' => [
         'fieldtype' => 'CommexFieldEnum',
@@ -69,7 +64,6 @@ class Member extends CommexRestResource {
         'options_callback' => 'getLocalityOptions',
         'sortable' => TRUE,
         'filter' => TRUE,
-        'edit  access' => 'ownerOrAdmin',
       ],
 //      'coordinates' => [
 //        'fieldtype' => [
@@ -84,15 +78,12 @@ class Member extends CommexRestResource {
 //            'max' => 180
 //          ],
 //        ],
-//        'label' => 'Coordinates',
-//        'edit_access' => 'ownerOrAdmin',
-//        'view access' => 'ownerOrAdmin',
+//        'label' => 'Coordinates'
 //      ],
       'portrait' => array(
         'label' => 'Portrait',
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
-        'edit_access' => 'ownerOrAdmin',
       ),
       'balance' => array(
         'fieldtype' => 'CommexFieldVirtual',
@@ -138,6 +129,20 @@ class Member extends CommexRestResource {
     return $values;
   }
 
+  /**
+   * @param CommexObj $obj
+   * @param array $fieldnames
+   * @param type $expand
+   *
+   * @return type
+   */
+  public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
+    $fields = parent::view($obj, $fieldnames, $expand);
+    if (is_array($fields)) {
+      unset($fields['mail'], $fields['pass']);
+    }
+    return $fields;
+  }
 
   /**
    * {@inheritdoc}
@@ -191,7 +196,7 @@ class Member extends CommexRestResource {
       $query->condition('address.dependent_locality', $params['locality']);
     }
 
-    $params += ['sort' => 'lastaccess'];
+    $params += ['sort' => 'access'];
     //sort (optional, string) ... Sort according to 'proximity' (default), 'pos' or 'neg' shows them in order of balances
     list($field, $dir) = explode(',', $params['sort'].',DESC');
     switch ($field) {
@@ -202,7 +207,7 @@ class Member extends CommexRestResource {
         $query->sort('address.dependent_locality', $dir);
         break;
       case 'changed':
-        $query->sort('access', $dir);
+        $query->sort('changed', $dir);
         break;
       case 'balance':
         // Must join to the wallet table....
@@ -219,7 +224,7 @@ class Member extends CommexRestResource {
   function operations($id) {
     $account = User::load($id);
     $operations = [];
-    if ($this->ownerOrAdmin($id)) {
+    if ($this->ownerOrAdmin()) {
       if ($account->present->value) {
         $operations['absent'] = 'Go on holiday';
       }
@@ -257,22 +262,11 @@ class Member extends CommexRestResource {
    * @return bool
    *   TRUE if acces is granted
    */
-  public function ownerOrAdmin($id = NULL) {
+  public function ownerOrAdmin() {
     static $result = NULL;
-    if (!is_bool($result)) {
-      $account = \Drupal::currentUser();
-      // If the current user is admin
-      if ($account->hasPermission('administer users')) {
-        $result = TRUE;
-      }
-      elseif (is_null($id)) {
-        // Although posting users is not currently allowed
-        return TRUE;
-      }
-      else {
-        //if the current user is the given user
-        $result = $id == $account->id();
-      }
+    if (is_null($result)) {
+      $currentUser = \Drupal::currentUser();
+      $result = $currentUser->hasPermission('administer users') or \Drupal::currentUser()->id() == $this->object->id;
     }
     return $result;
   }

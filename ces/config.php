@@ -10,11 +10,10 @@ global $endpoints;
  * @var array
  */
 $endpoints = array(
-  //endpoint => classname
-  'transaction' => 'credit',
-  'offer' => 'offer',
-  'want' => 'want',
-  'member' => 'member'
+	'member' => 'Member',
+	'offer' => 'Offer',
+	'want' => 'Want',
+	'trade' => 'Transaction'
 );
 
 /**
@@ -30,14 +29,10 @@ function commex_config() {
   global $endpoints;
   $config = array(
     'versions' => array(COMMEX_VERSIONS),
-    'restPrefix' => 'commex',//because all this script is literally in a directory commex
     'logo' => '', //the logo of the exchange
     'sitename' => '',//the site name of the exchange
     'css' => '',
     'endpoints' => $endpoints
   );
-
   return $config;
 }
-
-

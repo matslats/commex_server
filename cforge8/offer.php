@@ -20,25 +20,21 @@ class Offer extends CommexRestResource {
       'title' => [
         'label' => 'Headline',
         'fieldtype' => 'CommexFieldText',
-        'required' => TRUE,
-        'edit access' => 'currentOrAdmin'
+        'required' => TRUE
       ],
       'description' => [
         'label' => 'Full description',
         'fieldtype' => 'CommexFieldText',
         'lines' => 5,
-        'required' => FALSE,
-        'edit access' => 'currentOrAdmin',
+        'required' => FALSE
       ],
       'user_id' => [
         'label' => 'Owner',
         'fieldtype' => 'CommexFieldReference',//defined in config
+        'reference' => 'member.name',
         'required' => FALSE,
         'default_callback' => 'currentUser',
-        'resource' => 'member',
-        'reffield' => 'name',
-        'edit access' => 'adminOnly',
-        //'query' => 'fields=name&fragment=',
+        'edit_access' => 'adminOnly',
         '_comment' => 'defaults to the current user'
       ],
       'expires' => [
@@ -47,7 +43,6 @@ class Offer extends CommexRestResource {
         'default_callback' => 'defaultExpiryDate',
         'min' => 'today:add:1:day',
         'max' => 'today:add:1:year',
-        'edit access' => 'currentOrAdmin',
         'required' => FALSE,
         'sortable' => TRUE,
       ],
@@ -60,7 +55,6 @@ class Offer extends CommexRestResource {
       'category' => array(
         'label' => 'Category',
         'fieldtype' => 'CommexFieldCategory',
-        'edit access' => 'currentOrAdmin',
         'required' => TRUE,
         'multiple' => TRUE
       ),
@@ -68,7 +62,6 @@ class Offer extends CommexRestResource {
         'label' => 'Image',
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
-        'edit access' => 'currentOrAdmin',
         'required' => FALSE
       ),
     ];
@@ -156,7 +149,7 @@ class Offer extends CommexRestResource {
     //Set the commex permissions
     $this->object->viewable = TRUE;
     $this->object->creatable = TRUE;
-    $this->object->deletable = $this->currentOrAdmin($this->object);
+    $this->object->deletable = $this->ownerOrAdmin();
     // TODO might want to move this equivalent to Drupal's Element::value method
     if (isset($vals['user_id']) && !is_numeric($vals['user_id'])) {
       if ($uids = \Drupal::entityQuery('user')->condition('name', $vals['user_id'])->execute()) {
@@ -206,36 +199,27 @@ class Offer extends CommexRestResource {
    * Field access callback
    */
   public function adminOnly($id = 0) {
+    return 0;
     return \Drupal::currentUser()->hasPermission('edit all smallads');
   }
 
- /**
-   * Field access callback
-   *
-   * Determine whether a field on a populated commex Object is editable by the current user
-   *
-   * @param string $id
-   *   The id of the offer, if applicable
-   *
-   * @return bool
-   *   TRUE if acces is granted
+  /**
+   * {@inheritdoc}
    */
-  public function currentOrAdmin($id = 0) {
+  public function ownerOrAdmin() {
     static $result = NULL;
-    if (!is_bool($result)) {
+    if (is_null($result)) {
       $account = \Drupal::currentUser();
       if ($account->hasPermission('edit all smallads')) {
         $result = TRUE;
       }
-      elseif (is_null($id)) { // POST
-        return TRUE;
-      }
       else {// PATCH
-        $result = $id == $account->id();
+        $result = $this->object->user_id == $account->id();
       }
     }
     return $result;
   }
+
 
   /**
    * Field default callback

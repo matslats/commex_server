@@ -7,6 +7,7 @@ use Drupal\field\Entity\FieldConfig;
 
 /**
  * @file
+ *
  * Defines the member/ commex resource
  */
 class Transaction extends CommexRestResource {
@@ -31,16 +32,14 @@ class Transaction extends CommexRestResource {
       'payer' => [
         'label' => 'Payer',
         'fieldtype' => 'CommexFieldReference',
-        'required' => TRUE,
-        'resource' => 'wallet',
-        'reffield' => 'name'
+        'reference' => 'wallet.name',
+        'required' => TRUE
       ],
       'payee' => [
         'label' => 'Payee',
         'fieldtype' => 'CommexFieldReference',
-        'required' => TRUE,
-        'resource' => 'wallet',
-        'reffield' => 'name'
+        'reference' => 'wallet.name',
+        'required' => TRUE
       ],
       'category' => [
         'label' => 'Category',
@@ -234,7 +233,6 @@ class Transaction extends CommexRestResource {
     }
     return $obj;
   }
-
   /**
    * {@inheritdoc}
    */
@@ -294,14 +292,13 @@ class Transaction extends CommexRestResource {
     return $query->execute();
   }
 
-
   /**
    * {@inheritdoc}
    */
   public function view(CommexObj $obj, array $fieldnames = array(), $depth = 0) {
     $result = parent::view($obj, $fieldnames, $depth);
     // Remove the self link - but why?
-    array_shift($result['_links']);
+//    array_shift($result['_links']);
     // Currently the $result['amount'] is the output of the compound field, which
     // is the rendered parts of the worth, concatenated with a space.
     // We're going to reload the transaction and and render the worth field normally.
@@ -329,6 +326,23 @@ class Transaction extends CommexRestResource {
     $currencies = Currency::loadMultiple();
     $currencies = Currency::loadMultiple();
     return reset($currencies);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function ownerOrAdmin() {
+    static $result = NULL;
+    if (is_null($result)) {
+      $account = \Drupal::currentUser();
+      if ($account->hasPermission('edit all smallads')) {
+        $result = TRUE;
+      }
+      else {// PATCH
+        $result = $this->object->user_id == $account->id();
+      }
+    }
+    return $result;
   }
 }
 

@@ -31,20 +31,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    */
   protected $entityQueryFactory;
 
-  /**
-   * Get a commex object for this resource type, optionally populated with the given values.
-   *
-   * @param array $vals
-   *
-   * @return CommexObj
-   */
-  public function getObj(array $vals = array()) {
-    if (empty($this->object)) {
-      commex_require('CommexObj', TRUE);
-      $this->object = new CommexObj($this);
-    }
-    return $this->object->set($vals);
-  }
 
   /**
    * {@inheritdoc}
@@ -121,7 +107,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
             $filename = \Drupal::currentUser()->id().REQUEST_TIME .'.'.$fileType;
             //Assumes the commex fieldname is the same as the fieldname on the entity.
             $definitions = \Drupal::service('entity_field.manager')
-              ->getFieldDefinitions($this->entityTypeId, $this->bundle)
+              ->getFieldDefinitions($this->entityTypeId, $this->bundle);
             $settings = $definitions[$name]->getSettings();
             $destination = $settings['uri_scheme'] . '://' . $settings['file_directory'] .'/'. $filename;
             $class = $settings['uri_scheme'] == 'public' ? '\Drupal\Core\StreamWrapper\PublicStream' : '\Drupal\Core\StreamWrapper\PrivateStream';
@@ -154,7 +140,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     $result = parent::view($obj, $fieldnames, $expand);
     foreach ($this->fields() as $fname => $def) {
       if ($def['fieldtype'] == 'CommexFieldImage') {
-        // Alwasy renders a thumbnail
+        // Always renders a thumbnail
         if ($img_id = $obj->{$fname}) {
           if (is_numeric($img_id)) {
             $file = \Drupal\file\Entity\File::load($img_id);

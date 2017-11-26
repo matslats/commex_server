@@ -24,44 +24,36 @@ class credit extends CommexRestResource {
         'label' => 'Description',
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
-        'filter' => 'string',
-        'edit access' => 'transactionEditAccess'
+        'filter' => 'string'
       ),
       'payer' => array(
         'label' => 'Payer',
         'fieldtype' => 'CommexFieldReference',
+        'reference' => 'member.name',
         'required' => TRUE,
-        'resource' => 'member',
-        'query' => 'fields=name&fragment=',
-        'edit access' => 'transactionEditAccess'
       ),
       'payee' => array(
         'label' => 'Payee',
         'fieldtype' => 'CommexFieldReference',
         'required' => TRUE,
-        'resource' => 'member',
-        'query' => 'fields=name&fragment=',
-        'edit access' => 'transactionEditAccess'
+        'reference' => 'member.name',
       ),
       'category' => array(
         'label' => 'Category',
         'fieldtype' => 'CommexFieldCategory',
-        'filter' => 'getCategoryOptions',
-        'edit access' => 'transactionEditAccess'
+        'filter' => 'getCategoryOptions'
       ),
       'created' => array(
         'label' => 'Date',
         'fieldtype' => 'CommexFieldVirtual',
         'callback' => 'transactionCreated',
-        'sortable' => TRUE,
-        'edit access' => 'transactionEditAccess'
+        'sortable' => TRUE
       ),
       'amount' => array(
         'label' => 'Amount',
         'fieldtype' => 'CommexFieldInteger',
         'min' => 0,
-        'sortable' => TRUE,
-        'edit access' => 'transactionEditAccess'
+        'sortable' => TRUE
       )
     );
     // Adjust the amount field to a compound field as necessary
@@ -97,12 +89,14 @@ class credit extends CommexRestResource {
   }
 
   public function getObj(array $vals = array()) {
-    parent::getObj($vals);
-    //Set the commex permissions
-    $this->object->viewable = TRUE;
-    $this->object->creatable = TRUE;//near enough
-    $this->object->deletable = FALSE;
-    //editable is handled field by field
+    if (!$this->object) {
+      parent::getObj($vals);
+      //Set the commex permissions
+      $this->object->viewable = TRUE;
+      $this->object->creatable = TRUE;//near enough
+      $this->object->deletable = FALSE;
+      //editable is handled field by field
+    }
     return $this->object;
   }
 
@@ -112,7 +106,7 @@ class credit extends CommexRestResource {
    */
   public function getList(array $params, $offset, $limit) {
     $query = db_select('mcapi_transactions', 't')
-      ->fields('t', array('serial'))
+      ->fields('t', array('serial'))->distinct()
       ->range($offset, $limit);
     $query->join('field_data_worth', 'w', "t.xid = w.entity_id AND w.entity_type = mcapi_transaction'");
     $query->condition('w.worth_currcode', $this->currency()->info['currcode']);
@@ -143,17 +137,16 @@ class credit extends CommexRestResource {
     }
 
     //sort (optional, string) ... Sort according
-    if (!empty($params['sort'])) {
-      list($field, $dir) = explode(',', $params['sort'].',DESC');
-      switch ($field) {
-        case 'amount':
-          $query->join('field_data_worth', 'worth', 'worth.entity_id = t.xid');
-          $query->orderby('worth.worth_quantity', $dir);
-          break;
-        case 'created':
-        default:
-          $query->orderby('t.created', $dir);
-      }
+    $params += array('sort' => 'created');
+    list($field, $dir) = explode(',', $params['sort'].',DESC');
+    switch ($field) {
+      case 'amount':
+        $query->join('field_data_worth', 'worth', 'worth.entity_id = t.xid');
+        $query->orderby('worth.worth_quantity', $dir);
+        break;
+      case 'created':
+      default:
+        $query->orderby('t.created', $dir);
     }
     return $query->execute()->fetchCol();
   }
@@ -165,10 +158,10 @@ class credit extends CommexRestResource {
     $transaction = transaction_load($id);
     if ($transaction->state == TRANSACTION_STATE_PENDING and module_exists('mcapi_signatures')) {echo 1;
       if (isset($transaction->pending_signatures[$GLOBALS['user']->uid]) and $transaction->pending_signatures[$GLOBALS['user']->uid] == 1) {
-        $operations['sign'] = 'Sign';
+        $operations['sign'] = t('Sign');
       }
       elseif (!empty($GLOBALS['user']->roles[RID_COMMITTEE])) {
-        $operations['signoff'] = 'Sign';
+        $operations['signoff'] = t('Sign');
       }
     }
     return $operations;
@@ -306,6 +299,13 @@ class credit extends CommexRestResource {
 
   function transactionEditAccess($xid) {
     return FALSE;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  function ownerOrAdmin() {
+    return !empty($GLOBALS['user']->roles[RID_COMMITTEE]);
   }
 
 }
