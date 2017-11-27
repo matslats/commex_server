@@ -133,9 +133,7 @@ class member extends CommexRestResource {
   public function getOptionsFields(array $methods) {
     $fields = parent::getOptionsFields($methods);
     // Prevent showing mail on GET
-    if ($method == 'GET') {
-      unset($fields['mail']);
-    }
+    unset($fields['GET']['mail'],$fields['GET']['pass']);
     return $fields;
   }
 
@@ -177,7 +175,6 @@ class member extends CommexRestResource {
           $query->orderby('access', $dir);
       }
     }
-
     return $query->execute()->fetchCol();
   }
 
@@ -196,33 +193,33 @@ class member extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-    $user = user_load($id);
-    if (!empty($user->picture)) {
-      if (is_numeric($user->picture)) {
-        $user->picture = file_load($account->picture);
+    if ($user = user_load($id)) {
+      if (!empty($user->picture)) {
+        if (is_numeric($user->picture)) {
+          $user->picture = file_load($account->picture);
+        }
+        if (!empty($user->picture->uri)) {
+          $pic_filepath = $user->picture->uri;
+        }
       }
-      if (!empty($user->picture->uri)) {
-        $pic_filepath = $user->picture->uri;
+      elseif (variable_get('user_picture_default', '')) {
+        $pic_filepath = variable_get('user_picture_default', '');
       }
-    }
-    elseif (variable_get('user_picture_default', '')) {
-      $pic_filepath = variable_get('user_picture_default', '');
-    }
-    $fieldData = parent::loadCommexFields($id) + array(
-      'name' => $user->name,
-      'mail' => $user->mail,
-      'portrait' => file_create_url($pic_filepath),
-      'phone' => $user->profile_phones ? $user->profile_phones[LANGUAGE_NONE][0]['value'] : '', //@todo put the second phone number here as well?
-      'street_addresss' => $user->profile_address[LANGUAGE_NONE][0]['thoroughfare'],
-      'locality' => $user->profile_address[LANGUAGE_NONE][0]['dependent_locality'],
-      'aboutme' => $user->profile_notes ? $user->profile_notes[LANGUAGE_NONE][0]['value'] : '',
-    );
+      $fieldData = parent::loadCommexFields($id) + array(
+        'name' => $user->name,
+        'mail' => $user->mail,
+        'portrait' => file_create_url($pic_filepath),
+        'phone' => $user->profile_phones ? $user->profile_phones[LANGUAGE_NONE][0]['value'] : '', //@todo put the second phone number here as well?
+        'street_addresss' => $user->profile_address[LANGUAGE_NONE][0]['thoroughfare'],
+        'locality' => $user->profile_address[LANGUAGE_NONE][0]['dependent_locality'],
+        'aboutme' => $user->profile_notes ? $user->profile_notes[LANGUAGE_NONE][0]['value'] : '',
+      );
 
-    // Drupal's user doesn't have a lastModified time - somehow.
-    $this->lastModified = max(array($this->lastModified, $user->login));
-    return $fieldData;
+      // Drupal's user doesn't have a lastModified time - somehow.
+      $this->lastModified = max(array($this->lastModified, $user->login));
+      return $fieldData;
+    }
   }
-
 
   /**
    * {@inheritdoc}

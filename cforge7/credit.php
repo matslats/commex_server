@@ -6,7 +6,6 @@ module_load_include('inc', 'mcapi');
  * @file
  * Defines the credit/ commex resource
  * The classname transaction is already in use in the mutual credit module
- *
  */
 class credit extends CommexRestResource {
 
@@ -53,6 +52,7 @@ class credit extends CommexRestResource {
         'label' => 'Amount',
         'fieldtype' => 'CommexFieldInteger',
         'min' => 0,
+        'required' => TRUE,
         'sortable' => TRUE
       )
     );
@@ -62,7 +62,8 @@ class credit extends CommexRestResource {
     if ($currency_display['divisions']) { // make it a compound field
       $fields['amount'] = array(
         'label' => 'Amount',
-        'fieldtype' => array($fields['amount'])
+        'fieldtype' => array($fields['amount']),
+        'required' => TRUE,
       );
       unset($fields['amount']['fieldtype'][0]['label']);
 
@@ -73,14 +74,16 @@ class credit extends CommexRestResource {
             'fieldtype' => 'CommexFieldInteger',
             'max' => 99,
             'min' => 0,
-            'width' => 2
+            'width' => 2,
+            'required' => TRUE,
           );
           break;
 
         case CURRENCY_DIVISION_MODE_CUSTOM:
           $fields['amount']['fieldtype'][1] = array(
             'fieldtype' => 'CommexFieldEnum',
-            'options' => $currency_display['divisions_allowed']
+            'options' => $currency_display['divisions_allowed'],
+            'required' => TRUE,
           );
           break;
       }
@@ -156,7 +159,7 @@ class credit extends CommexRestResource {
    */
   function operations($id) {
     $transaction = transaction_load($id);
-    if ($transaction->state == TRANSACTION_STATE_PENDING and module_exists('mcapi_signatures')) {echo 1;
+    if ($transaction->state == TRANSACTION_STATE_PENDING and module_exists('mcapi_signatures')) {
       if (isset($transaction->pending_signatures[$GLOBALS['user']->uid]) and $transaction->pending_signatures[$GLOBALS['user']->uid] == 1) {
         $operations['sign'] = t('Sign');
       }
@@ -187,34 +190,33 @@ class credit extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-    $transaction = transaction_load($id);// NB $id is the serial number not the xid
-    $worth = $transaction->worth[LANGUAGE_NONE][0];
-    $fieldData = parent::loadCommexFields($id) + array(
-      // Note we are giving the user ID not the wallet ID, otherwise we need to define a new REST endpoint
-      'payer' => $transaction->payer,
-      'payee' => $transaction->payee,
-      'created' => $transaction->created
-    );
-    $fields = $this->fields();
-    if ($fields['amount']['fieldtype'] == 'CommexFieldInteger') {
-      $fieldData['amount'] = intval($worth['quantity']);
+    if ($transaction = transaction_load($id)) {// NB $id is the serial number not the xid
+      $worth = $transaction->worth[LANGUAGE_NONE][0];
+      $fieldData = parent::loadCommexFields($id) + array(
+        // Note we are giving the user ID not the wallet ID, otherwise we need to define a new REST endpoint
+        'payer' => $transaction->payer,
+        'payee' => $transaction->payee,
+        'created' => $transaction->created
+      );
+      $fields = $this->fields();
+      if ($fields['amount']['fieldtype'] == 'CommexFieldInteger') {
+        $fieldData['amount'] = intval($worth['quantity']);
+      }
+      else {
+        $fieldData['amount'] = explode('.', $worth['quantity']);
+      }
+      if ($items = field_get_items('transaction', $transaction, variable_get('transaction_description_field', ''))) {
+        $fieldData['description'] = $items[0]['value'];
+      }
+      //prepare non-virtual CommexField values from the native entity
+      return $fieldData;
     }
-    else {
-      $fieldData['amount'] = explode('.', $worth['quantity']);
-    }
-    if ($items = field_get_items('transaction', $transaction, variable_get('transaction_description_field', ''))) {
-      $fieldData['description'] = $items[0]['value'];
-    }
-    //prepare non-virtual CommexField values from the native entity
-    return $fieldData;
   }
   /**
    * {@inheritdoc}
    */
   function saveNativeEntity(CommexObj $obj, &$errors = array()) {
-
     //THIS HAS TO MOVE - to be done more natively, or done here directly from $obj
-    module_load_include('inc', 'mcapi');
     $obj->amount->value = currency_explode($obj->amount);
 
     if ($obj->id) {
@@ -226,7 +228,7 @@ class credit extends CommexRestResource {
       $transaction->state = TRANSACTION_STATE_FINISHED;
       module_load_include('inc', 'mcapi_signatures');
       if (in_array($transaction->type, _get_signable_transaction_types())) {
-        $config = _signature_settings_default($type);
+        $config = _signature_settings_default($transaction->type);
         if ($config['participants'] || $config['countersignatories']) {
           $transaction->state = TRANSACTION_STATE_PENDING;
         }
@@ -234,8 +236,8 @@ class credit extends CommexRestResource {
       $transaction->creator = $GLOBALS['user']->uid;
       $transaction->created = REQUEST_TIME;
     }
-    $transaction->payer = $obj->payer;
-    $transaction->payee = $obj->payee;
+    $transaction->payer = substr($obj->payer, strpos($obj->payer, '/')+1);
+    $transaction->payee = substr($obj->payee, strpos($obj->payer, '/')+1);
     $transaction->description = $obj->description;
     $fields = $this->fields();
     if ($fields['amount']['fieldtype'] != 'CommexFieldInteger') {
@@ -256,7 +258,7 @@ class credit extends CommexRestResource {
     else {
       $cluster = transaction_cluster_create($transaction, TRUE);
     }
-    $obj->ID = reset($cluster)->serial;
+    $obj->id = reset($cluster)->serial;
   }
 
   /**
@@ -306,6 +308,14 @@ class credit extends CommexRestResource {
    */
   function ownerOrAdmin() {
     return !empty($GLOBALS['user']->roles[RID_COMMITTEE]);
+  }
+
+  public function getOptions($id = NULL, $operation = NULL) {
+    $options = parent::getOptions($id);
+    if (in_array('DELETE', $options)) {
+      unset($options[array_search('DELETE', $options)]);
+    }
+    return $options;
   }
 
 }

@@ -99,22 +99,23 @@ class proposition extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-    $node = node_load($id);
-    $body = field_view_field('node', $node, 'body');
-    $fieldData = parent::loadCommexFields($id) + array(
-      'title' => $node->title,
-      'description' => $body[0]['#markup'],
-      'user_id' => $node->uid,//
-      'expires' => $node->end,
-      'category' => $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'], // Just the first
-    );
-    if ($imageItem = $node->image[LANGUAGE_NONE][0]) {
-      $fieldData['image'] = file_create_url($imageItem['uri']);
+    if ($node = node_load($id)) {
+      $body = field_view_field('node', $node, 'body');
+      $fieldData = parent::loadCommexFields($id) + array(
+        'title' => $node->title,
+        'description' => !empty($body)? $body[0]['#markup'] : '',
+        'user_id' => $node->uid,//
+        'expires' => $node->end,
+        'category' => $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'], // Just the first
+      );
+      if ($imageItem = isset($node->image[LANGUAGE_NONE]) ? $node->image[LANGUAGE_NONE][0] : 0) {
+        $fieldData['image'] = file_create_url($imageItem['uri']);
+      }
+      // Drupal's user doesn't have a lastModified time - somehow.
+      $this->lastModified = max(array($this->lastModified, $node->changed));
+      //prepare non-virtual CommexField values from the native entity
+      return $fieldData;
     }
-    // Drupal's user doesn't have a lastModified time - somehow.
-    $this->lastModified = max(array($this->lastModified, $node->changed));
-    //prepare non-virtual CommexField values from the native entity
-    return $fieldData;
   }
 
   /**
@@ -122,10 +123,7 @@ class proposition extends CommexRestResource {
    */
   public function getOptionsFields(array $methods) {
     $fields = parent::getOptionsFields($methods);
-    // Prevent showing mail on GET
-    if ($method == 'POST' or $method == 'PATCH') {
-      unset($fields['user_id']);
-    }
+    unset($fields['POST']['user_id']);
     return $fields;
   }
 
@@ -142,18 +140,17 @@ class proposition extends CommexRestResource {
     return $this->object;
   }
 
-
   /**
    * {@inheritdoc}
    */
   public function getList(array $params, $offset, $limit) {
+echo 5;
     $query = db_select('node', 'n')->fields('n', array('nid'))
       ->condition('n.uid', 0, '>')
       ->condition('n.status', 1)
       ->condition('n.type', 'proposition')
       ->range($offset, $limit);
     $query->join('offers_wants', 'ow', 'ow.nid = n.nid AND ow.want = '. (int)($this->resource == 'want'));
-
 
     // Filter by name or part-name.
     if (!empty($params['fragment'])) {
@@ -183,7 +180,7 @@ class proposition extends CommexRestResource {
       }
     }
 
-    //sort (optional, string) ... Sort according to 'proximity' (default), 'pos' or 'neg' shows them in order of balances
+    // Sort (optional, string) ... Sort according to 'proximity' (default), 'pos' or 'neg' shows them in order of balances
     if (!empty($params['sort'])) {
       list($field, $dir) = explode(',', $params['sort'].',DESC');
       switch ($field) {
@@ -195,8 +192,9 @@ class proposition extends CommexRestResource {
           $query->orderby('n.changed', $dir);
       }
     }
-
-    return $query->execute()->fetchCol();
+$result = $query->execute()->fetchCol();
+print_r($result);die('fff');
+    return $result;
   }
 
 
@@ -206,8 +204,8 @@ class proposition extends CommexRestResource {
   function operations($id) {
     $proposition = node_load($id);
     $operations = array();
-    if (node_access('update', $node)) {
-      if ($smallad->scope->value) {
+    if (node_access('update', $proposition)) {
+      if ($proposition->status) {
         $operations['unpublish'] = 'Unpublish';
       }
       else {
@@ -236,14 +234,14 @@ class proposition extends CommexRestResource {
   /**
    * Field access callback
    */
-  function ownerOrAdmin() {
+  public function ownerOrAdmin() {
     return $this->isAdmin() or $this->object->user_id = $GLOBALS['user']->uid;
   }
 
   /**
    * {@inheritdoc}
    */
-  private function isAdmin() {
+  public function isAdmin() {
     return !empty($GLOBALS['user']->roles[RID_COMMITTEE]);
   }
 

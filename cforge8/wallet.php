@@ -15,20 +15,18 @@ class Wallet {
    * Get Wallets, assuming they identifiable by their holders.
    */
   public static function getList(array $params, $offset, $limit) {
-    if (empty($params['fragment'])) {
-      trigger_error('Commex Wallet::getList called without fragment');
-      return [];
-    }
     $query = \Drupal::entityQuery('mcapi_wallet');
     if (empty($limit)) {
       $limit = 10;
     }
     // The query range
     $query->range($offset, $limit);
-    // Filter by name or part-name.
-    $query->condition('name', $params['fragment'].'%', 'LIKE');
-
-    return $query->execute();
+    if (!empty($params['fragment'])) {
+      // Filter by name or part-name.
+      $query->condition('name', $params['fragment'].'%', 'LIKE');
+    }
+    $result = $query->execute();
+    return $result;
   }
 
 
@@ -53,7 +51,17 @@ class Wallet {
     return $pseudoObj;
   }
 
-  // Show the wallet owner, not the wallet.
+
+  /**
+   * Show the wallet owner, not the wallet.
+   *
+   * @param type $obj
+   *   stdClass Object(id => 106, name => Yvette Leduc)
+   * @param array $fieldnames
+   * @param bool $expand
+   *
+   * @return string or array
+   */
   function view($obj, $fieldnames = [], $expand = FALSE) {
     if ($expand)  {
       $plugin = commex_get_resource_plugin('member');
@@ -61,7 +69,10 @@ class Wallet {
       $obj = $plugin->getObj($vals);
       return $plugin->view($obj, [], 1);
     }
-    return $obj->name;
+    else {
+      $fieldname = reset($fieldnames);
+      return $obj->{$fieldname};
+    }
   }
 
 
@@ -76,7 +87,7 @@ class Wallet {
    * @return boolean
    */
   public function authenticate($username, $password) {
-    commex_include('CommexRestResourceBase', TRUE);
-    return CommexRestresource::authenticate($username, $password);
+    commex_require('CommexRestResourceBase', TRUE);
+    return CommexRestResource::authenticate($username, $password);
   }
 }

@@ -1,7 +1,7 @@
 <?php
 
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\smallads\Entity\SmallAd;
+use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * @file
@@ -12,6 +12,7 @@ class Offer extends CommexRestResource {
   protected $resource = 'offer';
   protected $entityTypeId = 'smallad';
   protected $bundle = 'offer';
+
   /**
    * The structure of the offer, not translated.
    */
@@ -33,7 +34,7 @@ class Offer extends CommexRestResource {
         'fieldtype' => 'CommexFieldReference',//defined in config
         'reference' => 'member.name',
         'required' => FALSE,
-        'default_callback' => 'currentUser',
+        'default_callback' => 'currentUserId',
         'edit_access' => 'adminOnly',
         '_comment' => 'defaults to the current user'
       ],
@@ -88,6 +89,7 @@ class Offer extends CommexRestResource {
       }
       return $values;
     }
+    throw new Exception('Unknown offer ID: '.$id);
   }
 
   /**
@@ -150,7 +152,7 @@ class Offer extends CommexRestResource {
     $this->object->viewable = TRUE;
     $this->object->creatable = TRUE;
     $this->object->deletable = $this->ownerOrAdmin();
-    // TODO might want to move this equivalent to Drupal's Element::value method
+    // If the user_id has the name in it
     if (isset($vals['user_id']) && !is_numeric($vals['user_id'])) {
       if ($uids = \Drupal::entityQuery('user')->condition('name', $vals['user_id'])->execute()) {
         $this->object->user_id = reset($uids);
@@ -199,7 +201,6 @@ class Offer extends CommexRestResource {
    * Field access callback
    */
   public function adminOnly($id = 0) {
-    return 0;
     return \Drupal::currentUser()->hasPermission('edit all smallads');
   }
 
@@ -224,7 +225,7 @@ class Offer extends CommexRestResource {
   /**
    * Field default callback
    */
-  function currentUser() {
+  function currentUserId() {
     return \Drupal::currentUser()->id();
   }
   /**

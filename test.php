@@ -5,13 +5,13 @@
   <body>
   <?php if (!$_POST) { ?>
     <form method = "post">
-      <input type="text" name="url" placeholder="http://server.com/commex" />
       <input type="text" name="username" placeholder="username" />
       <input type="text" name="password" placeholder="password" />
       <input type="submit">
     </form>
   <?php } else {
-    ini_set('show_errors', 1);
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
     $_SERVER['REQUEST_URI'] = dirname($_SERVER['REQUEST_URI']);
     $_SERVER['HTTP_ACCEPT'] = 'application/json';
     //$_SERVER['HTTP_AUTHORIZATION'] = 'Basic '.base64_encode($_POST['username'].':'.$_POST['password']);
@@ -26,7 +26,7 @@
     }
 
     //Contact form
-    $user_id = autocomplete_rand('user', 'fields=id&fragment=');
+    $user_id = autocomplete_rand('member', 'fields=id&fragment=');
     list($status_code) = process('POST', 'contact', $user_id, '', '', array('test subject', 'test body'));
     if ($status_code == 200) {
       test_output_ok('Sent contact mail to user: '.$id, 'DELETE', $resource);
@@ -34,7 +34,6 @@
     else {
 
     }
-
     global $messages;
     foreach($messages as $resource => $methods) {
       foreach ($methods as $method => $ids) {
@@ -45,19 +44,21 @@
         }
       }
     }
-
   } ?>
   </body>
 </html>
-
 
 <?php
 
 function validate_config($config) {
   //do tests...
-
 }
 
+/**
+ * Run through viewinng, writing editing and deleting resources on an endpoint.
+ *
+ * @param string $resource
+ */
 function test_endpoint($resource)  {
   global $messages;
   // Test the content of OPTIONS
@@ -65,14 +66,19 @@ function test_endpoint($resource)  {
   if ($status_code == 403) {
     die('Login failed');
   }
+  elseif (!is_array($result)) {
+    die("No OPTIONS on $resource: $result");
+  }
   foreach ($result as $method  => $fields) {
     test_field_definitions($resource, $method, $fields);
   }
+
   // Now we POST to this resource
   if (isset($result['POST']))  {
     unset($existing);
     $values = commex_test_populate_fields($result['POST'], TRUE);
     list($status_code, $content) = process('POST', $resource, 0, '', '', $values);
+
     if ($status_code == 201) {
       $id = $content['id'];
       test_output_ok("Item $id created", 'POST', $resource);
@@ -91,24 +97,25 @@ function test_endpoint($resource)  {
     list($status_code, $content) = process('GET', $resource, $id);
   }
   list($status_code, $result) = process('OPTIONS', $resource, $id);
-
   foreach ($result as $method  => $fields) {
     test_field_definitions($resource, $method, $fields);
   }
+
   // Now we need to PATCH, GET, and DELETE the thing we just POSTed
-  $test_values = commex_test_populate_fields($result['PATCH'], FALSE);
-  if ($result['PATCH']) {
+  if (isset($result['PATCH'])) {
+    $test_values = commex_test_populate_fields($result['PATCH'], FALSE);
+echo $resource; print_r($result['PATCH']);print_r($test_values);
     list($status_code, $content) = process('PATCH', $resource, $id, '', '', $test_values);
     if ($status_code == 200 and is_array($content)) {
       test_output_ok('Item updated', 'PATCH', $resource);
       commex_test_check_values($content, $test_values, 'PATCH', $resource);
     }
     else {
-      test_output_error($status_code ."Unable to update item $id:".print_r($content, 1), 'PATCH', $resource);
+      test_output_error($status_code ." Unable to update item $id:".print_r($content, 1), 'PATCH', $resource, $id);
     }
   }
 
-  if ($result['GET']) {
+  if (isset($result['GET'])) {
     list($status_code, $content) = process('GET', $resource, $id);
     if ($status_code == 200)  {
       test_output_ok("Item $id retrieved", 'GET', $resource);
@@ -121,24 +128,25 @@ function test_endpoint($resource)  {
       return;
     }
   }
-
   if (isset($existing)) {
     return;
   }
   // Now delete the item
-  $id = $content['id'];
-  list($status_code) = process('DELETE', $resource, $id);
-  if ($status_code == 204) {
-    list($status_code, $content) = process('GET', $resource, $id);
-    if ($status_code == 410) {
-      test_output_ok('Deleted item: '.$id, 'DELETE', $resource);
+  if (isset($result['GET'])) {
+    $id = $content['id'];
+    list($status_code) = process('DELETE', $resource, $id);
+    if ($status_code == 204) {
+      list($status_code, $content) = process('GET', $resource, $id);
+      if ($status_code == 410) {
+        test_output_ok('Deleted item: '.$id, 'DELETE', $resource);
+      }
+      else {
+        test_output_error($status_code .' Unexpected result when trying to GET deleted resource '.$id, 'DELETE', $resource, $id);
+      }
     }
     else {
-      test_output_error($status_code .' Unexpected result when trying to GET deleted resource '.$id, 'DELETE', $resource, $id);
+      test_output_error($status_code .' Problem deleting '.$content['id'], 'DELETE', $resource, $content['id']);
     }
-  }
-  else {
-    test_output_error($status_code .' Problem deleting '.$content['id'], 'DELETE', $resource, $content['id']);
   }
 
 
@@ -192,7 +200,7 @@ function test_field_definitions($resource, $method, $fields) {
             }
             break;
           case 'number':
-            if (empty($def['min'])) {
+            if (!isset($def['min'])) {
               test_output_error('Number must define min', 'POST-OPTIONS', $resource, $id);
             }
             break;
@@ -220,7 +228,6 @@ function test_field_definitions($resource, $method, $fields) {
   if (empty($messages['OPTIONS'][$method])) {
     test_output_ok("OK", $method, $resource, 'definition');
   }
-
 }
 
 function test_output_error($message, $method, $resource, $id = 0) {
@@ -241,19 +248,20 @@ function test_output_warning($message, $method, $resource, $id = NULL) {
  * Get some example data for each field of a resource.
  *
  * @param array $field_definitions from the OPTIONS
- * @param bool $required_fields
- *   TRUE to populate the required fields, FALSE to populate the non-required fields
+ * @param bool $required_only
+ *   TRUE to populate the required fields, FALSE to populate the non-required fields.
+ *
  * @return array
  *   Some default values
  */
-function commex_test_populate_fields(array $field_definitions, $required_fields = TRUE) {
+function commex_test_populate_fields(array $field_definitions, $required_only = TRUE) {
   $vals = array();
   foreach ($field_definitions as $fieldname => $def) {
-    if ((bool)@$def['required'] == $required_fields) {
+    if ((bool)@$def['required'] or !$required_only) {
       // Compound Fields
       if (is_array($def['type'])) {
         //always get all the subfields
-        $vals[$fieldname] = commex_test_populate_fields($def['type'], FALSE);
+        $vals[$fieldname] = commex_test_populate_fields($def['type'], $required_fields);
       }
       else {
         if ($def['type'] == 'textfield' and isset($def['min'])) {
@@ -284,10 +292,7 @@ function commex_test_populate_fields(array $field_definitions, $required_fields 
             $vals[$fieldname] = array_rand($def['options'], $def['multiple'] + 1);
             break;
           case 'number':
-            $vals[$fieldname] = rand(
-              isset($def['min']) ? $def['min'] : 0,
-              isset($def['max']) ? $def['max'] : 100
-            )/10;
+            $vals[$fieldname] = 1;
             break;
           case 'integer':
             $vals[$fieldname] = rand(isset($def['min']) ? $def['min'] : 0, $def['max'] ?: 10);
@@ -304,11 +309,19 @@ function commex_test_populate_fields(array $field_definitions, $required_fields 
   return $vals;
 }
 
-function autocomplete_rand($resource_type, $query) {
-  // Pick the first result from a randomletter
-  $randletter = chr(97 + mt_rand(0, 25));
-  list($code, $items) = process('GET', $resource_type, 0, '', $query.$randletter);
-  return $items[array_rand($items)];
+
+function autocomplete_rand($resource_type, $string) {
+  static $used = array();
+  $used[$resource_type] = (array)$used[$resource_type];
+  list($code, $items) = process('GET', $resource_type, 0, '', $string.'&limit=100&depth=0');
+  if (empty($items)) {
+    die("No items on $resource_type");
+  }
+  $items = array_diff($items, $used[$resource_type]);
+  shuffle($items);
+  $rand_item = reset($items);
+  $used[$resource_type][] = $rand_item;
+  return $rand_item;
 }
 
 function commex_test_check_values(array $content, array $values, $method, $resource_id) {

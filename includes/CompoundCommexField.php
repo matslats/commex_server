@@ -15,7 +15,7 @@ class CompoundCommexField extends CommexField {
     parent::__construct($definition, $commexObj);
     foreach ($definition['fieldtype'] as $subdef) {
       $classname = commex_get_field_class($subdef['fieldtype']);
-      $subdef['edit_access'] = $definition['edit_access'];
+      $subdef['edit_access'] = isset($definition['edit_access']) ?: 'ownerOradmin';
       $this->subFields[] = new $classname($subdef, $commexObj);
     }
   }

@@ -113,7 +113,7 @@ interface CommexRestResourceInterface {
    *
    * @param string $id
    *
-   * @return array
+   * @return array | NULL
    *   Field names and values
    */
   public function loadCommexFields($id);

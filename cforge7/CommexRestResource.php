@@ -37,14 +37,10 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    */
   public function delete($entity_id) {
     $info = entity_get_info($this->entityTypeId);
-    $delete_callback = $info['deletion callback'];
-    try {
+    if ($delete_callback = $info['deletion callback']) {
       $delete_callback($entity_id);
+      return TRUE;
     }
-    catch (\Exception $e) {
-      return 0;
-    }
-    return TRUE;
   }
 
 

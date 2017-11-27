@@ -5,17 +5,16 @@ use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * @file
- * Defines the member/ commex resource
- *
+ * Defines the want/ commex resource
  */
 class Want extends CommexRestResource {
 
   protected $resource = 'want';
   protected $entityTypeId = 'smallad';
   protected $bundle = 'want';
+
   /**
    * The structure of the want, not translated.
-   *
    */
   function fields() {
     $fields = [
@@ -37,7 +36,6 @@ class Want extends CommexRestResource {
         'required' => FALSE,
         'default_callback' => 'currentUserId',
         'edit_access' => 'adminOnly',
-        //'query' => 'fields=name&fragment=',
         '_comment' => 'defaults to the current user'
       ],
       'expires' => [
@@ -83,6 +81,7 @@ class Want extends CommexRestResource {
       }
       return $values;
     }
+    throw new Exception('Unknown want ID: '.$id);
   }
 
 
@@ -93,6 +92,7 @@ class Want extends CommexRestResource {
    * @param ContentEntityInterface $smallad
    */
   protected function translateToEntity(CommexObj $obj, ContentEntityInterface $smallad) {
+    parent::translateToEntity($obj, $smallad);
     $smallad->title = $obj->title;
     $smallad->type = 'want';
     $smallad->body = $obj->description;
@@ -177,7 +177,8 @@ class Want extends CommexRestResource {
     //Set the commex permissions
     $this->object->viewable = TRUE;
     $this->object->creatable = TRUE;
-    $this->object->deletable = $this->currentOrAdmin($this->object);
+    $this->object->deletable = $this->ownerOrAdmin($this->object);
+    // Convert the user name to the id
     if (isset($vals['user_id']) && !is_numeric($vals['user_id'])) {
       if ($uids = \Drupal::entityQuery('user')->condition('name', $vals['user_id'])->execute()) {
         $this->object->user_id = reset($uids);

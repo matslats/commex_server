@@ -169,8 +169,13 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
         foreach ($resource_plugin->getList($query, $offset, $limit) as $id) {
           $vals = $resource_plugin->loadCommexFields($id);
           $obj = $resource_plugin->getObj($vals);
-          if (!empty($query['depth']) or $fieldnames) {
-            $expand = @$query['depth'] -1;
+          if ($fieldnames) {
+            $expand = count($fieldnames) > 1;
+          }
+          elseif (!empty($query['depth']) ){
+            $expand = $query['depth'] -1;
+          }
+          if ($fieldnames or $expand) {
             $content[] = $resource_plugin->view(
               $obj,
               $fieldnames,
@@ -205,6 +210,7 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
       $obj = $resource_plugin->getObj($vals);
       $resource_plugin->saveNativeEntity($obj, $errors);
       if ($errors) {
+        print_r($errors);
         $status_code = 400;
         $content = implode(' ', $errors);
       }
@@ -260,8 +266,11 @@ function commex_get_resource_plugin($resource_type) {
   }
   $classname = isset($endpoints[$resource_type]) ? $endpoints[$resource_type] : $resource_type;
   commex_require($classname, FALSE);
-  $class = new $classname();
-  return $class;
+  if (class_exists($classname)) {
+    return new $classname();
+  }
+  if ($resource_type == 'user')print_r(debug_backtrace());
+  die("Cannot find class $classname for resourceType $resource_type");
 }
 
 /**

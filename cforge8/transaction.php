@@ -164,6 +164,7 @@ class Transaction extends CommexRestResource {
       }
       return $values;
     }
+    throw new Exception('Unknown transaction serial: '.$id);
   }
 
     /**
@@ -176,17 +177,17 @@ class Transaction extends CommexRestResource {
     }
     else {//POST new
       $props = ['type' => 'default'];
-      // This will cause problems if the bundle
-      $definition = \Drupal::entityTypeManager()->getDefinition($this->entityTypeId);
-      if ($definition->hasKey('bundle')) {
-        $props[$definition->getkey('bundle')] = $this->bundle;
-      }
       $transaction = $storage->create($props);
     }
     $this->translateToEntity($obj, $transaction);
     foreach ($transaction->validate() as $violation) {
       $errors[$violation->getPropertyPath()] = (string)$violation->getMessage();
     }
+//Array(
+//  [payer.0] => The wallet value cannot be null
+//  [worth] => This value should not be null.
+//  [payer.0.target_id] => This value should be of the correct primitive type.
+//)
 
     if ($errors) {
       $content = implode(' ', $errors);
@@ -238,12 +239,14 @@ class Transaction extends CommexRestResource {
    */
   protected function translateToEntity(CommexObj $obj, ContentEntityInterface $transaction) {
     $currency = $this->currency();
-    list($vals[1],$vals[3]) = $obj->amount;
+    $formatted_amount = $obj->amount;
+    list($vals[1],$vals[3]) = (array)$obj->amount;
     $transaction->worth->setValue(['curr_id' => $currency->id(), 'value' => $currency->unformat($vals)]);
     $transaction->description->value = $obj->description;
 
-    $transaction->payer->target_id = $obj->payer;
-    $transaction->payee->target_id = $obj->payee;
+    $transaction->payer->target_id = substr($obj->payer, strpos($obj->payer, '/')+1);
+    $transaction->payee->target_id = substr($obj->payee, strpos($obj->payer, '/')+1);
+
     $transaction->category->setValue($obj->category);
   }
 

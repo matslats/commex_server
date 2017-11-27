@@ -80,13 +80,11 @@ abstract class CommexRestResourceBase {
       }
     }
     else {
+      $methods[] = 'GET';
+      $methods[] = 'HEAD';
       if ($obj->creatable) {
         $methods[] = 'POST';
       }
-    }
-    if ($obj && $obj->viewable) {
-      $methods[] = 'GET';
-      $methods[] = 'HEAD';
     }
     return $methods;
   }

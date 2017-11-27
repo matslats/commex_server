@@ -16,12 +16,11 @@ class contact {
    * 'X-Mailer: PHP/' . phpversion();
    */
   static function message($recipient_id, $subject, $body, $test) {
-    if ($user = User::load($recipient_id)) {
+    if ($user = user_load($recipient_id)) {
       $headers[] = 'From: noreply@communityforge.net';
-      $reply = \Drupal::currentUser()->getDisplayName() . '<'.\Drupal::currentUser()->getEmail().'>';
-      $headers[] = "Reply-To: $reply";
+      $headers[] = "Reply-To: ".$GLOBALS['user']->name . '<'.$GLOBALS['user']->mail.'>';
       $headers[] = 'X-Mailer: PHP/' . phpversion();
-      return mail($user->getEmail(), $subject, $body, implode("\n", $headers));
+      return mail($user->mail, $subject, $body, implode("\n", $headers));
     }
     else {
       trigger_error('Cannot mail unknown user: '.$recipient_id);
@@ -29,10 +28,9 @@ class contact {
   }
 
   public static function authenticate($username, $password) {
-    // This is for Drupal 8
-    global $container;
-    if ($uid = $container->get('user.auth')->authenticate($username, $password)) {
-      \Drupal::currentUser()->setAccount(User::load($uid));
+    global $user;
+    if ($uid = user_authenticate($username, $password)) {
+      $user = user_load($uid);
     }
     return (bool)$uid;
   }
