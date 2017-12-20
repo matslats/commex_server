@@ -39,8 +39,10 @@ function commex_config() {
     'slider' => array(),// urls to background
     'sitename' => 'My funkky site',//the site name of the exchange
     'css' => '',
-    'endpoints' => $endpoints
+    'endpoints' => $endpoints,
+    'language' => 'en'
   );
 
   return $config;
 }
+

@@ -15,7 +15,7 @@ class member extends CommexRestResource {
    * The structure of the member, not translated.
    */
   public function fields() {
-    return array(
+    $fields = array(
       'name' => array(
         'label' => 'First name & last name',
         'fieldtype' => 'CommexFieldText',
@@ -33,7 +33,7 @@ class member extends CommexRestResource {
         'label' => 'Password',
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
-        'view access' => 'selfOrAdmin'
+        'view access' => 'OwnerOrAdmin'
       ),
       'phone' => array(
         'label' => 'Phone',
@@ -44,7 +44,7 @@ class member extends CommexRestResource {
       'aboutme' => array(
         'label' => 'What would you do if you had enough money?',
         'fieldtype' => 'CommexFieldText',
-        'long' => TRUE,
+        'lines' => 4,
         'required' => FALSE
       ),
       'street_address' => array(
@@ -58,19 +58,6 @@ class member extends CommexRestResource {
         'required' => TRUE,
         'options_callback' => 'getLocalityOptions'
       ),
-      'coordinates' => array(
-        'label' => 'Coordinates',
-        'fieldtype' => array(
-            'lat' => array(
-              'fieldtype' => 'CommexFieldText',
-              'regex' => '^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?)$'
-            ),
-            'lon' => array(
-              'fieldtype' => 'CommexFieldText',
-              'regex' => '^[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$'
-            ),
-        )
-      ),
       'portrait' => array(
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
@@ -82,6 +69,22 @@ class member extends CommexRestResource {
         'callback' => 'memberBalance'
       )
     );
+    if(module_exists('cforge_geo')) {
+      $fields['coordinates'] = array(
+        'label' => 'Coordinates',
+        'fieldtype' => array(
+            'lat' => array(
+              'fieldtype' => 'CommexFieldText',
+              'regex' => '^[-+]?([1-8]?\d(\.\d+)?|90(\.0+)?)$'
+            ),
+            'lon' => array(
+              'fieldtype' => 'CommexFieldText',
+              'regex' => '^[-+]?(180(\.0+)?|((1[0-7]\d)|([1-9]?\d))(\.\d+)?)$'
+            ),
+        )
+      );
+    }
+    return $fields;
   }
 
 
@@ -193,6 +196,9 @@ class member extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
+    if ($id == 'me') {
+      $id = $GLOBALS['user']->uid;
+    }
     if ($user = user_load($id)) {
       if (!empty($user->picture)) {
         if (is_numeric($user->picture)) {
@@ -214,7 +220,9 @@ class member extends CommexRestResource {
         'locality' => $user->profile_address[LANGUAGE_NONE][0]['dependent_locality'],
         'aboutme' => $user->profile_notes ? $user->profile_notes[LANGUAGE_NONE][0]['value'] : '',
       );
-
+      if ($items = field_get_items('user', $user, 'profile_location')) {
+        $fieldData['coordinates'] = array($items[0]['lat'], $items[0]['lon']);
+      }
       // Drupal's user doesn't have a lastModified time - somehow.
       $this->lastModified = max(array($this->lastModified, $user->login));
       return $fieldData;
@@ -267,6 +275,13 @@ class member extends CommexRestResource {
       // which calls file_save_upload
       //N.B. We haven't used the field value yet
       $edit['picture'] = file_save_upload('image', $validators);
+    }
+
+    if ($coords = $obj->coordinates) {
+      if (array_filter($coords)) {
+        $edit['profile_location'][LANGUAGE_NONE][0]['lat'] = $obj->coordinates[0];
+        $edit['profile_location'][LANGUAGE_NONE][0]['lon'] = $obj->coordinates[1];
+      }
     }
     $account = user_save($account, $edit);
     $obj->id = $account->uid;

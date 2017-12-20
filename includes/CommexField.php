@@ -1,16 +1,9 @@
 <?php
 
 /**
- * This file contains the base and fallback field object with methods to
+ * This file contains the base field object with methods to
  * populate, view and show the definition of the field. Each content type
- * (member, offer, transaction, etc) must have its fields defined. See the
- * example class.
- */
-
-/**
- * Default field class assumes the value as stored, input and displayed are the
- * same; could be suitable for numbers and text. However this class is meant for
- * extending and contains several extensions below.
+ * (member, offer, transaction, etc) must have its fields defined. 
  */
 abstract class CommexField implements CommexFieldInterface{
 
@@ -81,7 +74,7 @@ abstract class CommexField implements CommexFieldInterface{
       'required' => 0,
       'widget' => '',
       'format' => 'html',
-      'sortable' => 0,
+      'sortable' => FALSE,
       'filter' => NULL,
       'edit_access' => 'ownerOrAdmin',
       'view_access' => TRUE,
@@ -146,66 +139,82 @@ abstract class CommexField implements CommexFieldInterface{
    * $is_form_method
    *   TRUE if the method is PATCH or POST FALSE if it is GET
    *
-   * @return array|null
+   * @return array
    */
   public function getFieldDefinition($is_form_method) {
     $props = array();
     if ($is_form_method) {
-      // Show the field:
-      //   If the object already exists and is exitable
-      //   if the object doesn't exist
-      //only show the widgets if this field is editable
-
-      $props['label'] = $this->label;
-      if ($this->editable()) {
-        $props['type'] = $this->widget;
-        $props['required'] = $this->required ?: 0;
-        if ($this->value) {
-          $props['default'] = $this->value;
-        }
-      }
+      return $this->getFormDefinition($is_form_method == 'PATCH');
     }
     elseif ($this->viewable()) {
-      $props['label'] = $this->label;
-      $props['format'] = $this->format;
-      $props['sortable'] = $this->sortable;
-      if ($this->filter) {
-        $props['filter'] = $this->filter;
-        if (function_exists($this->filter)){
-          $props['filter'] = $props['filter']();
-        }
+      return $thisgetViewDefinition();
+    }
+  }
+
+  /**
+   * Get definitions of fields suitable for populating forms
+   *
+   * @param bool $existing
+   *   TRUE if this an update form, FALSE for a new object
+   *
+   * @return array
+   */
+  public function getFormDefinition($existing = FALSE) {
+    $props = array();
+    // Show the field:
+    //   If the object already exists and is exitable
+    //   if the object doesn't exist
+    //only show the widgets if this field is editable
+
+    $props['label'] = $this->label;
+    if ($this->editable()) {
+      $props['type'] = $this->widget;
+      $props['required'] = $this->required ?: 0;
+      if (!$existing) {
+        $props['default'] = $this->value;
       }
     }
     return $props;
   }
 
+
   /**
-   * determines whether this field can be edited by this user
+   * Get definitions of fields suitable for display functions
+   *
+   * @return array
    */
-  function editable() {
-    // For existing objects
-    if ($this->commexObj->id) {
-      if ($this->edit_access) {
-        if ($this->commexObj->id) {
-          return $this->commexObj->resourcePlugin->{$this->edit_access}();
-        }
-        else {
-          //There is no object, therefore this field CAN be posted
-          return TRUE;
-        }
-      }
-      else {
-        // No callback means the the field is editable
-        return TRUE;
+  public function getViewDefinition() {
+    $props = array();
+    $props['label'] = $this->label;
+    $props['format'] = $this->format;
+    $props['sortable'] = $this->sortable;
+    if ($this->filter) {
+      $props['filter'] = $this->filter;
+      if (function_exists($this->filter)){
+        $props['filter'] = $props['filter']();
       }
     }
-    //For new objects
-    elseif (empty($this->commexObj->id)) {
-      //this field is editable if the default value has not been set
-      return is_null($this->value);
+    return $props;
+  }
+
+
+
+  /**
+   * Determines whether this field can be edited by this user.
+   */
+  function editable() {
+    if ($this->edit_access) {
+      return $this->commexObj->resourcePlugin->{$this->edit_access}();
+    }
+    else {
+      // No callback means the the field is editable
+      return TRUE;
     }
   }
 
+  /**
+   * Determines whether this field is visible to this user.
+   */
   function viewable() {
     if (is_string($this->view_access)) {
       return call_user_func_array(

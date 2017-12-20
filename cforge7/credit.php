@@ -92,14 +92,12 @@ class credit extends CommexRestResource {
   }
 
   public function getObj(array $vals = array()) {
-    if (!$this->object) {
-      parent::getObj($vals);
-      //Set the commex permissions
-      $this->object->viewable = TRUE;
-      $this->object->creatable = TRUE;//near enough
-      $this->object->deletable = FALSE;
-      //editable is handled field by field
-    }
+    parent::getObj($vals);
+    //Set the commex permissions
+    $this->object->viewable = TRUE;
+    $this->object->creatable = TRUE;//near enough
+    $this->object->deletable = FALSE;
+    //editable is handled field by field
     return $this->object;
   }
 
@@ -111,7 +109,7 @@ class credit extends CommexRestResource {
     $query = db_select('mcapi_transactions', 't')
       ->fields('t', array('serial'))->distinct()
       ->range($offset, $limit);
-    $query->join('field_data_worth', 'w', "t.xid = w.entity_id AND w.entity_type = mcapi_transaction'");
+    $query->join('field_data_worth', 'w', "t.xid = w.entity_id AND w.entity_type = 'transaction'");
     $query->condition('w.worth_currcode', $this->currency()->info['currcode']);
     if (!empty($params['state'])) {
       $query->condition('state', $state);
@@ -159,6 +157,7 @@ class credit extends CommexRestResource {
    */
   function operations($id) {
     $transaction = transaction_load($id);
+    $operations = array();
     if ($transaction->state == TRANSACTION_STATE_PENDING and module_exists('mcapi_signatures')) {
       if (isset($transaction->pending_signatures[$GLOBALS['user']->uid]) and $transaction->pending_signatures[$GLOBALS['user']->uid] == 1) {
         $operations['sign'] = t('Sign');
@@ -290,7 +289,7 @@ class credit extends CommexRestResource {
 
   function transactionCreated($id) {
     $transaction = transaction_load($id);
-    return $transaction->created;
+    return date('d-M-Y', $transaction->created);
   }
 
 
@@ -311,7 +310,7 @@ class credit extends CommexRestResource {
   }
 
   public function getOptions($id = NULL, $operation = NULL) {
-    $options = parent::getOptions($id);
+    $options = parent::getOptions($id, $operation);
     if (in_array('DELETE', $options)) {
       unset($options[array_search('DELETE', $options)]);
     }

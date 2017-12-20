@@ -43,7 +43,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     }
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -92,7 +91,8 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     // This is the first chance we get to process the imagefield
     foreach ($this->fields() as $fname => $def) {
       if ($def['fieldtype'] == 'CommexFieldImage') {
-        if ($file = $obj->{$fname}) {
+        $file = $obj->{$fname};
+        if ($file and strpos($file, ',')) {
           list($info, $data) = explode(',', $file);
           if (preg_match('/data:([\/a-z]+);/', $info, $matches)) {
             $mimeType = $matches[1];
@@ -147,10 +147,12 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
           }
         }
       }
+      if ($def['fieldtype'] == 'CommexFieldText' and isset($def['lines']) and $def['lines'] > 1) {
+        $result[$fname] = str_replace(array("\r", "\n"), '<br/>', trim($result[$fname]));
+      }
     }
     return $result;
   }
-
 
   /**
    * {@inheritdoc}
@@ -164,8 +166,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     return (bool)$uid;
   }
 
-
-    /**
+  /**
    * Creates an EntityQuery and adds conditions common to some resources.
    *
    * Namely $offset, $limit, geo, category
@@ -178,7 +179,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    *
    * @note
    */
-
   final protected function getListQuery(array $params, $offset, $limit) {
     $query = \Drupal::entityQuery($this->entityTypeId);
     if (empty($limit)) {
@@ -195,8 +195,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
   }
 
   public function operate($id, $operation) {}
-
-
 
   /**
    * Show which fields are expected for each of the given http methods

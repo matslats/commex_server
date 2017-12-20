@@ -77,8 +77,12 @@ interface CommexRestResourceInterface {
 
 
   /**
-   * Determines which methods are available to the current user on the current
-   * resource.
+   * Determines which methods are available to the current user.
+   *
+   * @param int $id
+   *   The id of the specific resource
+   * @param string $operation
+   *   The name of the operation we want to test for.
    *
    * @return string[]
    *   The names of the methods, e.g. [GET, POST], excluding OPTIONS!

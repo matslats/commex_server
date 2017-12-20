@@ -106,7 +106,6 @@ class Want extends CommexRestResource {
    */
   public function getList(array $params, $offset, $limit) {
     $query = $this->getListQuery($params, $offset, $limit);
-    $query->condition('scope', 0, '>');
     $query->condition('type', 'want');
     if (!empty($params['fragment'])) {
       $group = $query->orConditionGroup()
@@ -119,6 +118,10 @@ class Want extends CommexRestResource {
     }
     if (!empty($params['user_id'])) {
       $query->condition('uid', $params['user_id']);
+    }
+    // Unless we are filtering by the current user, show all the items
+    if (empty($params['user_id']) or !$this->adminOnly()) {
+      $query->condition('scope', 0, '>');
     }
     $params += ['sort' => 'changed'];
     //sort (optional, string) ... Sort according to 'proximity' (default), 'pos' or 'neg' shows them in order of balances
@@ -161,9 +164,11 @@ class Want extends CommexRestResource {
     switch ($operation) {
       case 'unpublish':
         $smallad->scope->value = 0;
+        $smallad->expires->value = \Drupal::time()->getRequestTime() -1;
         break;
       case 'publish':
         $smallad->scope->value = 2;
+        $smallad->expires->value = \Drupal::time()->getRequestTime() + 3600*24*28;
         break;
     }
     $smallad->save();

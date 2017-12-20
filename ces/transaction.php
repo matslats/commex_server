@@ -7,7 +7,7 @@
  */
 class Transaction extends CommexRestResource {
 
-	protected $resource = 'trade';
+	protected $resource = 'transaction';
 
   /**
    * The structure of the transaction, not translated.
@@ -123,9 +123,10 @@ class Transaction extends CommexRestResource {
    * {@inheritdoc}
    */
   function operations($id) {
+    $operations = parent::operations($id);
     //$transaction = transaction_load($id);
     //if the transaction is less than 2 weeks old and the current user is permitted...
-    $operations['delete'] = 'Delete';
+    //$operations['delete'] = 'Delete';
     return $operations;
   }
 
@@ -157,6 +158,7 @@ class Transaction extends CommexRestResource {
     }
     trigger_error("Could not find transaction $id", E_USER_WARNING);
   }
+
   /**
    * {@inheritdoc}
    */
@@ -202,8 +204,8 @@ class Transaction extends CommexRestResource {
         buyer_nid = '".$exchanges[$buyer_xid]['nid']."',
         seller_amount = $obj->amount,
         buyer_amount = '$obj->amount',
-        seller_levy = '".$exchanges[$seller_xid]['levy_rate'] * $obj->amount."',
-        buyer_levy = '".$exchanges[$buyer_xid]['levy_rate'] * $obj->amount."',
+        seller_levy = '".$exchanges[$seller_xid]['levy_rate']/100 * $obj->amount."',
+        buyer_levy = '".$exchanges[$buyer_xid]['levy_rate']/100 * $obj->amount."',
         seller_levyrate = '".$exchanges[$seller_xid]['levy_rate']."',
         buyer_levyrate = '".$exchanges[$buyer_xid]['levy_rate']."',
         base_amount = '".round($curSellerAmount/$sngSellerConversionRate, 2)."',
@@ -211,6 +213,7 @@ class Transaction extends CommexRestResource {
         date_edited = NOW(),
         who_entered = 's',
         interface = 'commex'
+        WHERE txid = $obj->id
       ");
     }
     else {
@@ -223,8 +226,8 @@ class Transaction extends CommexRestResource {
         buyer_nid = '".$exchanges[$buyer_xid]['nid']."',
         seller_amount = '$obj->amount',
         buyer_amount = '$obj->amount',
-        seller_levy = '".$exchanges[$seller_xid]['levy_rate'] * $obj->amount."',
-        buyer_levy = '".$exchanges[$buyer_xid]['levy_rate'] * $obj->amount."',
+        seller_levy = '".$exchanges[$seller_xid]['levy_rate']/100 * $obj->amount."',
+        buyer_levy = '".$exchanges[$buyer_xid]['levy_rate']/100 * $obj->amount."',
         seller_levyrate = '".$exchanges[$seller_xid]['levy_rate']."',
         buyer_levyrate = '".$exchanges[$buyer_xid]['levy_rate']."',
         base_amount = '".round($curSellerAmount/$sngSellerConversionRate, 2)."',
@@ -269,7 +272,7 @@ class Transaction extends CommexRestResource {
   /**
    * field edit access callback
    */
-  function transactionEditAccess($xid) {
+  function transactionEditAccess() {
     //editing not allowed by anybody!
     return FALSE;
   }
@@ -280,6 +283,19 @@ class Transaction extends CommexRestResource {
     $db->query("DELETE FROM transactions WHERE txid = $entity_id");
     echo 'deleted transaction';
     return TRUE;
+  }
+
+
+  /*
+	 * {@inheritdoc}
+   */
+  function ownerOrAdmin() {
+    global $uid;
+    if ($this->object->buyer == $uid or $this->object->seller == $uid) {
+      return TRUE;
+    }
+    global $user;
+    return $user['usertype'] == 'adm';
   }
 
 }

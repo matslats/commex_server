@@ -55,11 +55,12 @@ class CompoundCommexField extends CommexField {
    * Concatenate the subfields.
    */
   public function view() {
+
     $vals = array();
     foreach ($this->subFields as $subField) {
       $vals[] = $subField->view();
     }
-    return implode(' ', $vals);
+    return $vals;
   }
 
 

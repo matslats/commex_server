@@ -22,7 +22,7 @@ class proposition extends CommexRestResource {
       'description' => array(
         'label' => 'Full description',
         'fieldtype' => 'CommexFieldText',
-        'long' => TRUE,
+        'lines' => 4,
         'required' => FALSE,
         'filter' => TRUE,
       ),
@@ -30,7 +30,7 @@ class proposition extends CommexRestResource {
         'label' => 'Owner',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.name',
-        'default' => 'currentUserId',
+        'default_callback' => 'currentUserId',
         'required' => FALSE,
         'filter' => TRUE,
         'edit_access' => 'isAdmin',
@@ -39,7 +39,7 @@ class proposition extends CommexRestResource {
       'expires' => array(
         'label' => 'Display until',
         'fieldtype' => 'CommexFieldDate',//can be html 5 or a js component
-        'default' => 'defaultExpiryDate',
+        'default_callback' => 'defaultExpiryDate',
         'min' => 'today:add:1:day',
         'max' => 'today:add:1:year',
         'required' => FALSE,
@@ -85,7 +85,7 @@ class proposition extends CommexRestResource {
     $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'] = $obj->category;
     $node->want = $this->resource == 'want';
     $node->end = $obj->expires;
-    $node->uid = $obj->user_id;
+    $node->uid = $obj->user_id ?: $GLOBALS['user']->uid;
     if (property_exists($obj, 'image') and $img = $obj->image) {
       $node->image[LANGUAGE_NONE][0]['value'] = $img;
     }
@@ -144,10 +144,7 @@ class proposition extends CommexRestResource {
    * {@inheritdoc}
    */
   public function getList(array $params, $offset, $limit) {
-echo 5;
     $query = db_select('node', 'n')->fields('n', array('nid'))
-      ->condition('n.uid', 0, '>')
-      ->condition('n.status', 1)
       ->condition('n.type', 'proposition')
       ->range($offset, $limit);
     $query->join('offers_wants', 'ow', 'ow.nid = n.nid AND ow.want = '. (int)($this->resource == 'want'));
@@ -169,6 +166,12 @@ echo 5;
     if (!empty($params['user_id'])) {
       $query->condition('n.uid', $params['user_id']);
     }
+    else {
+      $query->condition('n.uid', 0, '>');
+    }
+    if (empty($params['user_id']) or !$this->isAdmin()) {
+      $query->condition('n.status', 1);
+    }
 
     // @todo Could this be move to the base class?
     if (!empty($params['cat_id'])) {
@@ -180,6 +183,7 @@ echo 5;
       }
     }
 
+    $params += array('sort' => 'changed');
     // Sort (optional, string) ... Sort according to 'proximity' (default), 'pos' or 'neg' shows them in order of balances
     if (!empty($params['sort'])) {
       list($field, $dir) = explode(',', $params['sort'].',DESC');
@@ -192,9 +196,7 @@ echo 5;
           $query->orderby('n.changed', $dir);
       }
     }
-$result = $query->execute()->fetchCol();
-print_r($result);die('fff');
-    return $result;
+    return $query->execute()->fetchCol();
   }
 
 
@@ -222,13 +224,13 @@ print_r($result);die('fff');
     $proposition = node_load($id);
     switch ($operation) {
       case 'unpublish':
-        $node->status = 0;
+        $proposition->end = time() -1;
         break;
       case 'publish':
-        $node->status = 1;
+        $proposition->end = strtotime('+1 month');
         break;
     }
-    node_save($node);
+    node_save($proposition);
   }
 
   /**
@@ -242,7 +244,7 @@ print_r($result);die('fff');
    * {@inheritdoc}
    */
   public function isAdmin() {
-    return !empty($GLOBALS['user']->roles[RID_COMMITTEE]);
+    return user_access('edit propositions');
   }
 
   function getCategoryOptions() {

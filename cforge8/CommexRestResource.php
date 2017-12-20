@@ -96,7 +96,8 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     // This is the first chance we get to process the imagefield
     foreach ($this->fields() as $fname => $def) {
       if ($def['fieldtype'] == 'CommexFieldImage') {
-        if ($file = $obj->{$fname}) {
+        $file = $obj->{$fname};
+        if ($file and strpos($file, ',')) {
           list($info, $data) = explode(',', $file);
           if (preg_match('/data:([\/a-z]+);/', $info, $matches)) {
             $mimeType = $matches[1];
@@ -151,6 +152,9 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
             $result[$fname] = str_replace('commex/', '', $filename);
           }
         }
+      }
+      if ($def['fieldtype'] == 'CommexFieldText' and isset($def['lines']) and $def['lines'] > 1) {
+        $result[$fname] = str_replace(array("\r", "\n"), '<br/>', trim($result[$fname]));
       }
     }
     return $result;
@@ -230,7 +234,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
     else {
       preg_match($pattern, $html, $matches);
     }
-    return $matches[1] ?: '';
+    return isset($matches[1]) ? $matches[1] : '';
   }
 
 }

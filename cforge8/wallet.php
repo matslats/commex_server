@@ -63,7 +63,7 @@ class Wallet {
    * @return string or array
    */
   function view($obj, $fieldnames = [], $expand = FALSE) {
-    if ($expand)  {
+    if ($expand or empty($fieldnames)) {
       $plugin = commex_get_resource_plugin('member');
       $vals = $plugin->loadCommexFields(\Drupal\mcapi\Entity\Wallet::load($obj->id)->getOwnerId());
       $obj = $plugin->getObj($vals);

@@ -21,50 +21,38 @@ class member extends CommexRestResource {
         'label' => 'Given name & second name',
         'required' => TRUE,
         'sortable' => TRUE, //NB this is the only sortable field at the moment.
-        'edit_access' => 'editUserField'
+        'view access' => 'OwnerOrAdmin'
       ],
       'pass' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Password',
-        'edit_access' => 'editUserField'
+        'view access' => 'ownerOrAdmin'
       ],
       'mail' => [
         'fieldtype' => 'CommexFieldEmail',
         'label' => 'Email',
-        'required' => TRUE,
-        // It is good practice to check a user controls an address before allowing changes
-        'edit_access' => 'editUserField'
+        'required' => TRUE
       ],
       'phone' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Phone',
-        'edit_access' => 'editUserField',
         '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber'
-      ],
-      'bio' => [
-        'fieldtype' => 'CommexFieldText',
-        'long' => TRUE,
-        'label' => 'Bio',
-        'edit_access' => 'editUserField'
       ],
       'address' => [
         'fieldtype' => 'CommexFieldText',
         'long' => TRUE,
-        'label' => 'Address',
-        'edit_access' => 'editUserField'
+        'label' => 'Address'
       ],
-      'locality' => [
+      'subarea' => [
         'fieldtype' => 'CommexFieldEnum',
         'label' => 'Sub area',
         'required' => TRUE,
-        'options_callback' => 'getLocalityOptions',
-        'edit_access' => 'editUserField'
+        'options_callback' => 'getLocalityOptions'
       ],
       'image' => [
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
-        'label' => 'Portrait',
-        'edit_access' => 'editUserField'
+        'label' => 'Portrait'
       ],
       'balance' => [
         'fieldtype' => 'CommexFieldVirtual',
@@ -96,11 +84,16 @@ class member extends CommexRestResource {
 		if (isset($params['uid'])) {
 		  $conditions[] = "uid = '".$params['uid']."'";
 		}
-		if (isset($params['name'])) {
+    // Filter by name or part-name.
+    // @todo use the entity label field and put this is in the base class
+    if (!empty($params['fragment'])) {
+		  $conditions[] = ' CONCAT(uid, " ", firstname, " ", surname) LIKE "%'.$params['fragment'].'%" ';
+    }
+		elseif (isset($params['name'])) {
 		  $conditions[] = ' CONCAT(firstname, " ", surname) LIKE "%'.$params['name'].'%" ';
 		}
-		//mail
-		//locality
+		//email
+		//subarea
 		//street address
 
     if ($conditions) {
@@ -151,6 +144,10 @@ class member extends CommexRestResource {
 	 * {@inheritdoc}
 	 */
 	function loadCommexFields($id) {
+    global $uid;
+    if ($id == 'me') {
+      $id = $uid;
+    }
 		// Load your member and put all its field values into an $arrayName = array('',);
 		$db = new Db();
 		$users = $db->select("SELECT * FROM users WHERE uid = '$id'");
@@ -175,37 +172,37 @@ class member extends CommexRestResource {
 			'type' => $user['usertype'],
 			'pass' => $user['passwd'],
 			'name' => $name,
-			'aboutme' => $user['bio'],
+			'bio' => $user['bio'],
 			'address' => $address,
 			'mail' => $user['email'],
 			'phone' => $user['phone_m'],
-			'locality' => $user['subarea'],
+			'subarea' => $user['subarea'],
 			'image' => $user['picture']
 		);
 		return $values;
 	}
 
     protected function translateToEntity(CommexObj $obj, ContentEntityInterface $user) {
-    parent::translateToEntity($obj, $user);//this will save any pics
-    if ($user->isNew()) {
-      $user->status = \Drupal::currentUser()->hasPermission('administer users')
-          || \Drupal::Config('user.settings')->get('register') == USER_REGISTER_VISITORS;
-      $user->init->value = $obj->mail;
-      $user->setPassword($obj->pass);
-    }
-    $user->setUsername($obj->name);
-    $user->setEmail($obj->mail);
-    $countries = \Drupal\field\Entity\FieldConfig::load('user.user.address')->get('settings')['available_countries'];
-    $lastspace = strrpos($obj->name, ' ');
-    $user->address->setValue([
-      'given_name' => substr($obj->name, 0, $lastspace),
-      'family_name' => substr($obj->name, $lastspace + 1),
-      'address_line1' => $obj->street_address,
-      'dependent_locality' => $obj->locality,
-      'country_code' => reset($countries)
-    ]);
-    $user->phones->setValue($obj->phone);
-    $user->notes->setValue($obj->aboutme);
+//    parent::translateToEntity($obj, $user);//this will save any pics
+//    if ($user->isNew()) {
+//      $user->status = \Drupal::currentUser()->hasPermission('administer users')
+//          || \Drupal::Config('user.settings')->get('register') == USER_REGISTER_VISITORS;
+//      $user->init->value = $obj->mail;
+//      $user->setPassword($obj->pass);
+//    }
+//    $user->setUsername($obj->name);
+//    $user->setEmail($obj->mail);
+//    $countries = \Drupal\field\Entity\FieldConfig::load('user.user.address')->get('settings')['available_countries'];
+//    $lastspace = strrpos($obj->name, ' ');
+//    $user->address->setValue([
+//      'given_name' => substr($obj->name, 0, $lastspace),
+//      'family_name' => substr($obj->name, $lastspace + 1),
+//      'address_line1' => $obj->street_address,
+//      'dependent_locality' => $obj->subarea,
+//      'country_code' => reset($countries)
+//    ]);
+//    $user->phones->setValue($obj->phone);
+//    $user->notes->setValue($obj->bio);
     //TODO
     //$account->portrait->setValue($params['image']);
   }
@@ -223,13 +220,13 @@ class member extends CommexRestResource {
 		else {
 			$query = "INSERT INTO users SET ";
 		}
-		$fields[] =  "type = '$obj->type'";
+		$fields[] =  "usertype = '$obj->type'";
 		@list($firstname, $lastname) = explode(' ', $obj->name);
 
 		$fields[] =  "firstname = '$firstname'";
 		$fields[] =  "surname = '$lastname'";
-		$fields[] =  "mail = '$obj->mail'";
-		$fields[] =  "phone = '$obj->phone'";
+		$fields[] =  "email = '$obj->mail'";
+		$fields[] =  "phone_h = '$obj->phone'";
 		$fields[] =  "bio = '$obj->bio'";
 		@list($line1, $line2, $line3) = explode('<br />', $obj->address);
 		if ($line1) {
@@ -241,7 +238,7 @@ class member extends CommexRestResource {
 		if ($line3) {
 			$fields[] =  "address3 = '$line3'";
 		}
-		$fields[] =  "locality = '$obj->locality'";
+		$fields[] =  "subarea = '$obj->subarea'";
 
 		$query .= implode(', ', $fields);
 
@@ -250,7 +247,7 @@ class member extends CommexRestResource {
      */
 
 		if ($obj->id) {
-			$query .= " WHERE uid = $obj->id ";
+			$query .= " WHERE uid = '$obj->id' ";
 		}
 
 		$db = new Db();
@@ -268,8 +265,25 @@ class member extends CommexRestResource {
     if (is_array($fields)) {
   		unset($fields['mail'], $fields['pass']);// Don't show these to other users.
     }
-	 	return $fields;
-	}
+    foreach ($this->fields() as $fname => $def) {
+      if ($def['fieldtype'] == 'CommexFieldImage') {
+        // Always renders a thumbnail
+        if ($img_id = $obj->{$fname}) {
+          $fields[$fname] = 'https://community-exchange.org/images/people/'.$img_id;
+        }
+      }
+      elseif ($def['fieldtype'] == 'CommexFieldText' and isset($def['lines']) and $def['lines'] > 1) {
+        $fields[$fname] = str_replace(array("\r", "\n"), '<br/>', trim($fields[$fname]));
+      }
+    }
+    return $fields;
+  }
+
+  //never used
+  public function delete($entity_id) {
+
+  }
+
 
   function offerCount() {
     global $uid;
@@ -281,15 +295,16 @@ class member extends CommexRestResource {
     global $uid;
     $xid = substr($uid, 0, 4);
     $db = new Db();
-    $result = $db->select("SELECT `sub_area` FROM `subareas` WHERE `xid` = '$xid' AND `active`");
+    $result = $db->select("SELECT sub_area FROM subareas WHERE xid = '$xid' AND `active`");
 
     // matslats HACK to ensure that all subareas are on the list.
-    $result = array_merge($result, $db->select("SELECT DISTINCT subarea as sub_area FROM `users`"));
+    $result = array_merge($result, $db->select("SELECT DISTINCT subarea as sub_area FROM users where xid = '$xid'"));
 
     $subareas = array("" => "");
     foreach ($result as $row) {
       $subareas[$row['sub_area']] = $row['sub_area'];
     }
+    sort($subareas);
     return $subareas;
   }
 
@@ -305,7 +320,7 @@ class member extends CommexRestResource {
    * @return boolean
    *   TRUE if the current user is superadmin or the commexObj is the currenct user
    */
-  function editUserField(CommexObj $obj) {
+  function editUserField() {
 
   }
 
@@ -349,5 +364,11 @@ class member extends CommexRestResource {
         db_query('UPDATE users set present = 1 where id = '.$id);
         break;
     }
+  }
+
+  function ownerOrAdmin() {
+    global $uid;
+    if ($this->object->id == $uid) return TRUE;
+    return substr($uid, 4) == '0000';
   }
 }

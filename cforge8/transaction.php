@@ -156,11 +156,8 @@ class Transaction extends CommexRestResource {
       ];
       if (property_exists($transaction, 'category')) {
         foreach ($transaction->category->getValue() as $val) {
-          $values['category'][] = $val['target_id'];
+          $values['category'] = $val['target_id'];
         }
-      }
-      if (empty($this->fields()['category']['multiple'])and is_array($values['category'])) {
-        $values['category'] = reset($values['category']);
       }
       return $values;
     }
@@ -234,19 +231,29 @@ class Transaction extends CommexRestResource {
     }
     return $obj;
   }
+
   /**
    * {@inheritdoc}
    */
   protected function translateToEntity(CommexObj $obj, ContentEntityInterface $transaction) {
     $currency = $this->currency();
-    $formatted_amount = $obj->amount;
-    list($vals[1],$vals[3]) = (array)$obj->amount;
+    $vals = [];
+    //  the amount could be an integer or an array
+    if (is_array($this->fields()['amount']['fieldtype'])) {
+      $vals[1] = $obj->amount[0];
+      $vals[3] = $obj->amount[1];
+    }
+    else {
+      $vals = [1 => $obj->amount];
+    }
     $transaction->worth->setValue(['curr_id' => $currency->id(), 'value' => $currency->unformat($vals)]);
     $transaction->description->value = $obj->description;
+    // Payer and Payer are integers on POST, URIs otherwise.
+    $payer_wallet = is_numeric($obj->payer) ? $obj->payer : substr($obj->payer, strpos($obj->payer, '/')+1);
+    $payee_wallet = is_numeric($obj->payee) ? $obj->payee : substr($obj->payee, strpos($obj->payee, '/')+1);
 
-    $transaction->payer->target_id = substr($obj->payer, strpos($obj->payer, '/')+1);
-    $transaction->payee->target_id = substr($obj->payee, strpos($obj->payer, '/')+1);
-
+    $transaction->payer->setValue($payer_wallet);
+    $transaction->payee->setValue($payee_wallet);
     $transaction->category->setValue($obj->category);
   }
 
@@ -338,11 +345,8 @@ class Transaction extends CommexRestResource {
     static $result = NULL;
     if (is_null($result)) {
       $account = \Drupal::currentUser();
-      if ($account->hasPermission('edit all smallads')) {
+      if ($account->hasPermission('manage mcapi')) {
         $result = TRUE;
-      }
-      else {// PATCH
-        $result = $this->object->user_id == $account->id();
       }
     }
     return $result;

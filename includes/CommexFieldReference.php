@@ -24,11 +24,11 @@ class CommexFieldReference extends CommexFieldText {
     return $this->value;
   }
 
-  function expand() {
+  function expand($deep = 0) {
     $plugin = commex_get_resource_plugin($this->foreignResource);
     $vals = $plugin->loadCommexFields($this->value);
     $obj = $plugin->getObj($vals);
-    return $plugin->view($obj, array(), 1);
+    return $plugin->view($obj, array(), $deep);
   }
 
   public function getFieldDefinition($is_form_method) {

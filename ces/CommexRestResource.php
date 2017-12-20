@@ -2,7 +2,7 @@
 
 commex_require('CommexObj', TRUE);
 commex_require('CommexRestResourceBase', TRUE);
-commex_require('db_class', FALSE);
+//commex_require('db_class', FALSE);
 
 /**
  * Base class for REST endpoints
@@ -58,49 +58,57 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
 	 * @return boolean
 	 */
 	public static function authenticate($username, $password) {
+		echo 'authenticate';
 		global $uid, $user;
     $username = strtoupper($username);
 		$db = new Db();
     $users = $db->select("SELECT * FROM users WHERE uid = '$username'");
-    if ($users & md5($password) == $users[0]['passwd']) {
+    if ($users and md5($password) == $users[0]['passwd']) {
       $uid = $username;
+      $user = reset($users);
 			return TRUE;
 		}
 	}
 
-
   /**
-   * Copy the fields from the object to the entity
+   * Copy the fields from the object to the entity.
    */
   protected function translateToEntity(CommexObj $obj){
     // This is the first chance we get to process the imagefield
     foreach ($this->fields() as $fname => $def) {
       if ($def['fieldtype'] == 'CommexFieldImage') {
-        if ($file = $obj->{$fname}) {
-          list($info, $data) = explode(',', $file);
+        if ($obj->{$fname}) {
+          list($info, $base64data) = explode(',', $obj->{$fname});
           if (preg_match('/data:([\/a-z]+);/', $info, $matches)) {
-            $mimeType = $matches[1];
-            $fileType = substr($mimeType, strpos($mimeType, '/')+1);
-            $decoded = base64_decode($data);
-
             // This is where we need to save the image and put the field value with the image reference.
-            //trigger_error('Image saving route not yet written.');return;
-            global $uid;
-            // Make a unique filename
-            $filename = $uid . time();
-            $destination = '/tmp/'. $filename.'.'.$fileType;
-            file_put_contents($destination, $decoded);
-            $values = [$fname => $filename];
-            $obj->set($values);
+            $fileType = substr($matches[1], strpos($matches[1], '/')+1);
+            $filename = $this->getAttachedFilename($fname).'.'.$fileType;
+            $dest_path = $this->picpath .'/'.$filename;
+            file_put_contents($dest_path, base64_decode($base64data));
+            $obj->set([$fname => $filename]);
           }
         }
       }
     }
   }
 
-  function delete($entity_id) {
-    // nothing
+  /**
+   * Generate filename (before having saved the thing).
+   */
+  abstract protected function getAttachedFilename($fieldname = NULL);
+
+
+  /**
+   * Prepare the Commex object for viewing with the client, including the HATEOAS links
+   */
+  public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
+    $result = parent::view($obj, $fieldnames, $expand);
+    foreach ($this->fields() as $fname => $def) {
+      if ($def['fieldtype'] == 'CommexFieldText' and isset($def['lines']) and $def['lines'] > 1) {
+        $result[$fname] = str_replace(array("\r", "\n"), '<br/>', trim($result[$fname]));
+      }
+    }
+    return $result;
   }
 
 }
-

@@ -126,7 +126,7 @@ final class CommexObj {
   /**
    *  Convert the object into an array for sending as json
    */
-  function view(array $fieldnames = array(), $expand = FALSE) {
+  function view(array $fieldnames = array(), $expand = 0) {
     $show_fields = array_keys($this->getFieldDefinitions('GET', $fieldnames));
     $show_fields[] = 'id';
     if ($fieldnames) {
@@ -140,8 +140,9 @@ final class CommexObj {
       else {
         $field = $this->fields[$field_name];
         $output[$field_name] = $field->view();
-        if ($expand and ($field instanceOf CommexFieldReference)) {
-          $output[$field_name.'_ref'] = $field->expand();
+        if ($field instanceOf CommexFieldReference and $expand > 0) {
+          $expand--;
+          $output[$field_name.'_ref'] = $field->expand($expand);
         }
       }
     }
@@ -164,14 +165,28 @@ final class CommexObj {
    *   Field definitions, keyed by field name
    */
   function getFieldDefinitions($method, $fieldnames = NULL) {
-    $is_form_method = in_array($method, array('POST', 'PATCH'));
     $defs = array();
     foreach ($this->fields as $name => $field) {
       if ($name == 'id' or ($fieldnames && !in_array($name, $fieldnames))) {
         continue;
       }
-      if ($def = $field->getFieldDefinition($is_form_method)) {// Because virtualFields only return for GET
-        $defs[$name] = $def;
+      switch($method) {
+        case 'POST':
+        case 'PATCH':
+          if ($def = $field->getFormDefinition($method == 'PATCH')) {
+            $defs[$name] = $def;
+          }
+          break;
+        case 'GET':
+        case 'HEAD':
+          if ($def = $field->getViewDefinition()) {// Because virtualFields only return for GET
+            $defs[$name] = $def;
+          }
+          break;
+        case 'PUT':
+          break;
+        default:
+          die('Unknown method');
       }
     }
     return $defs;

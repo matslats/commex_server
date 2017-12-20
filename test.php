@@ -104,7 +104,6 @@ function test_endpoint($resource)  {
   // Now we need to PATCH, GET, and DELETE the thing we just POSTed
   if (isset($result['PATCH'])) {
     $test_values = commex_test_populate_fields($result['PATCH'], FALSE);
-echo $resource; print_r($result['PATCH']);print_r($test_values);
     list($status_code, $content) = process('PATCH', $resource, $id, '', '', $test_values);
     if ($status_code == 200 and is_array($content)) {
       test_output_ok('Item updated', 'PATCH', $resource);

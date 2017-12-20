@@ -60,16 +60,16 @@ abstract class CommexRestResourceBase {
    */
   public function getOptions($id = NULL, $operation = NULL) {
     //we can read the commex object to know about view and edit access.
-    $methods = array('OPTIONS');
-    $obj = $this->getObj();
+    $methods = array('OPTIONS', 'GET', 'HEAD');
     if ($id) {
+      $values = $this->loadCommexFields($id);
+      $obj = $this->getObj($values);
       if ($operation && $ops = $this->operations($id)) {
-        if (in_array($operation, $ops)) {
+        if (isset($ops[$operation])) {
           $methods[] = 'PUT';
         }
       }
       else {
-        $values = $this->loadCommexFields($id);
         $obj->set($values);
         if ($obj->editable) {
           $methods[] = 'PATCH';
@@ -80,9 +80,7 @@ abstract class CommexRestResourceBase {
       }
     }
     else {
-      $methods[] = 'GET';
-      $methods[] = 'HEAD';
-      if ($obj->creatable) {
+      if ($this->getObj()->creatable) {
         $methods[] = 'POST';
       }
     }
@@ -94,7 +92,7 @@ abstract class CommexRestResourceBase {
    */
   public function getOptionsFields(array $methods) {
     $info = array();
-    $methods = array_intersect($methods, array('GET', 'PATCH', 'POST', 'DELETE'));
+    $methods = array_intersect($methods, array('GET', 'PATCH', 'POST', 'DELETE', 'PUT'));
     foreach ($methods as $method) {
       if ($method == 'DELETE') {
         $info[$method]['confirm'] = $this->deleteConfirm;

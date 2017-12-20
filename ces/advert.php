@@ -1,12 +1,9 @@
 <?php
 
 /**
- * Example class for handling the offerings resource
- * See the base class for interface and documentation
+ * Class for handling the offerings resource
   */
-class offer extends CommexRestResource {
-
-	protected $resource = 'offer';
+class advert extends CommexRestResource {
 
 	/**
 	 * The structure of the offer, not translated.
@@ -17,79 +14,77 @@ class offer extends CommexRestResource {
         'fieldtype' => 'CommexFieldCategory',
         'label' => 'Offering category',
         'required' => TRUE,
-        'sortable' => TRUE,
-        'edit_access' => 'editOfferField'
+        'sortable' => TRUE
       ],
       'title' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Offering title',
-        'required' => TRUE,
-        'edit_access' => 'editOfferField'
+        'required' => TRUE
       ],
       'description' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Offering description',
-        'required' => TRUE,
-        'edit_access' => 'editOfferField'
-      ],
-      'requesting' => [
-        'fieldtype' => 'CommexFieldText',
-        'label' => 'Requesting',
-        'edit_access' => 'editOfferField',
+        'required' => TRUE
       ],
       'keywords' => [
         'fieldtype' => 'CommexFieldText',
-        'label' => 'Tags',
-        'edit_access' => 'editOfferField'
+        'label' => 'Tags'
       ],
       'expires' => [
         'fieldtype' => 'CommexFieldDate',
         'label' => 'Date expires',
         'required' => TRUE,
         'sortable' => TRUE,
-        'edit_access' => 'editOfferField',
+        'default_callback' => 'defaultExpires',
         'min' => 'today:add:1:day',
         'max' => 'today:add:1:year'
       ],
       'uid' => [
+        'label' => 'Advertiser',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
-        'label' => 'Advertiser',
-        'required' => TRUE,
+        'default_callback' => 'currentUserId',
+        'required' => FALSE,
         'sortable' => TRUE,
         'edit_access' => 'isAdmin'
-      ],
-      'image' => [
-        // @todo do we need to specify what formats the platform will accept, or what sizes?
-        'fieldtype' => 'CommexFieldImage',
-        'label' => 'Picture',
-        'edit_access' => 'editOfferField',
-      ],
+      ]
     ];
     return $fields;
   }
 
+	/**
+	 * {@inheritdoc}
+	 */
   public function getObj(array $vals = array()) {
     parent::getObj($vals);
     //Set the commex permissions
     $this->object->viewable = TRUE;
     $this->object->creatable = TRUE;
-    $this->object->deletable = TRUE;
+    $this->object->deletable = $this->ownerOrAdmin();
     return $this->object;
   }
 
+	/**
+	 * {@inheritdoc}
+	 */
   public function getList(array $params, $offset, $limit) {
 		global $uid;
+		// @todo just select id
 		$query = "SELECT * FROM adverts";
 		$conditions = array();
     //Assume the search is only in the user's own exchange
 		$conditions[] = "xid = '".substr($uid, 0, 4) ."'";
-    $conditions[] = "ad_type = 'w'";
+    $ad_type = $params['ad_type'];
+    $conditions[] = "ad_type = '$ad_type'";
 
 		// Build a query on your entity type, using the filters passed in $params
 		if (isset($params['uid'])) {
 		  $conditions[] = "uid = '".$params['uid']."'";
 		}
+    elseif (!$this->ownerOrAdmin()) {
+      //hide the 'hidden' ads if we're not filtering by a specific user
+      $conditions[] = 'hide = 0';
+    }
 		if (isset($params['category'])) {
 		  $conditions[] = "category = '".$params['category']."'";
     }
@@ -102,13 +97,14 @@ class offer extends CommexRestResource {
 		if (isset($params['fragment'])) {
 		  $conditions[] = "(title LIKE '%".$params['fragment']."%' OR description LIKE '%".$params['fragment']."%' OR category like LIKE '%".$params['fragment']."%' OR keywords LIKE '%".$params['fragment']."%' )";
     }
-
 		$query .= " WHERE ". implode(' AND ', $conditions);
 
-
-		//sort=name:ASC,uid:DESC
-    //translates to
-		//" ORDER BY name ASC, UID DESC "
+		/*
+     * We must support sorting on every field where 'sortable' = TRUE
+     * $params[sort]=name:ASC,uid:DESC
+     * translates to
+     * " ORDER BY name ASC, UID DESC "
+     */
     if (empty($params['sort'])) {
       $params['sort'] = 'expires,DESC';
     }
@@ -116,29 +112,18 @@ class offer extends CommexRestResource {
     $dir  = strtoupper($dir);
     switch ($field) {
       case 'category':
-        //need to do something with the category name
-        break;
-
       case 'uid':
-        //need to do something with the advertiser name
         break;
-
-      // these translate directly to the db table.
       case 'expires':
         $field = 'date_expires';
-      case 'starts':
-      case 'id':
-        $query .= " ORDER BY $field $dir ";
+        break;
     }
-		$query .= " LIMIT $offset, $limit";
-		//die($query);
+    $query .= " ORDER BY $field $dir LIMIT $offset, $limit ";
 		$db = new Db();
-		$results = $db->select($query);
-
-		foreach ($results as $row) {
+    $ids =  array();
+		foreach ($db->select($query) as $row) {
 			$ids[] = $row['id'];
 		}
-		// You must support sorting on every field where 'sortable' = TRUE
 		return $ids;
 	}
 
@@ -148,28 +133,26 @@ class offer extends CommexRestResource {
 	function loadCommexFields($id) {
 		// Load your offer and put all its field values into an array ready for CommexObj
 		$db = new Db();
-		$offers = $db->select("SELECT * FROM adverts WHERE id = '$id'");
+		$ads = $db->select("SELECT * FROM adverts WHERE id = '$id'");
 
-		if (empty($offers)) {
+		if (empty($ads)) {
       trigger_error("Could not find offer $id", E_USER_WARNING);
       return array();
 		}
-
-		$offer = reset($offers);
+		$ad = reset($ads);
 		return array(
-			'id' => $offer['id'],
-			'uid' => $offer['uid'],
-			'adtype' => $offer['ad_type'],
-			'oftype' => $offer['offering_type'],
-			'category' => $offer['category'],
-			'keywords' => $offer['keywords'],
-			'title' => $offer['title'],
-			'description' => $offer['description'],
-			'requesting' => $offer['talent_rate'],
-			'expires' => $offer['date_expires'],
-			'image' => $offer['image']
+			'id' => $ad['id'],
+			'uid' => $ad['uid'],
+			'adtype' => $ad['ad_type'],
+			'oftype' => $ad['offering_type'],
+			'category' => $ad['category'],
+			'keywords' => $ad['keywords'],
+			'title' => $ad['title'],
+			'description' => $ad['description'],
+			'requesting' => $ad['talent_rate'],
+			'expires' => $ad['date_expires'],
+			'image' => $ad['image']
 		);
-
 	}
 
 	/**
@@ -188,19 +171,19 @@ class offer extends CommexRestResource {
 		}
 		else {
 			$query = "INSERT INTO adverts SET ";
-      $fields[] = "ad_type = 'o'";
+      $fields[] = "ad_type = '$obj->ad_type'";
       $fields[] = "date_starts = NOW()";
       $fields[] =  "nid = '$nid'";
       $fields[] =  "display_nid = '$nid'";
       $fields[] =  "country = '$country'";
 		}
-    $fields[] =  "category = '$obj->category'"; //TODO categories have names
 		$fields[] =  "title = '$obj->title'";
 		$fields[] =  "description = '$obj->description'";
+    $fields[] =  "category = '$obj->category'"; //TODO categories have names
+		$fields[] =  "keywords = '$obj->keywords'";
 		$fields[] =  "date_expires = '".date('Y-m-d', $obj->expires)."'";
 		$fields[] =  "uid = '$obj->uid'";
 		$fields[] =  "date_edited = NOW()";
-		$fields[] =  "keywords = '$obj->keywords'";
 		$query .= implode(', ', $fields);
 		//todo need to show the incoming pic should be managed
 	//	$user->picture = array(
@@ -220,83 +203,73 @@ class offer extends CommexRestResource {
 	/**
 	 * {@inheritdoc}
 	 */
-	public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
-		$fields = parent::view($obj, $fieldnames, $expand);
-		unset($fields['mail'], $fields['pass']);// Don't show these to other users.
-		return $fields;
-	}
-
-	/**
-	 * {@inheritdoc}
-	 */
 	public function delete($entity_id) {
 		$db = new Db();
 		$result = $db->query("DELETE FROM adverts where id = " .$entity_id);
     return TRUE;
 	}
 
+	/**
+	 * {@inheritdoc}
+	 */
+	public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
+		$fields = parent::view($obj, $fieldnames, $expand);
+    foreach ($this->fields() as $fname => $def) {
+      if ($def['fieldtype'] == 'CommexFieldImage') {
+        // Always renders a thumbnail
+        if ($img_id = $obj->{$fname}) {
+          $fields[$fname] = 'https://community-exchange.org/pics/'.$img_id;
+        }
+      }
+    }
+    return $fields;
+  }
+
 
   /*
-   * Field access callback
-   *
-   * @return boolean
-   *   TRUE if the current user can edit the current offer
+	 * {@inheritdoc}
    */
-  public function editOfferField(CommexObj $obj) {
-
+  public function ownerOrAdmin() {
+    global $uid;
+    if ($this->object->uid == $uid) {
+      return TRUE;
+    }
+    return $this->isAdmin();
   }
 
   /*
-   * Field access callback
+   * Custom field access callback
    *
    * @return boolean
    *   TRUE if the current user is superadmin or admin of the current group
    */
-  public function isAdmin(CommexObj $obj) {
-
+  public function isAdmin() {
+    global $user;
+    return $user['usertype'] == 'adm';
   }
 
-
-  /**
-   * Add operations for offer
-   *
-   * A way to hide or show the ad with one button.
-   *
-   * TODO TIM
-   */
-  function operations($id) {
+	/**
+	 * {@inheritdoc}
+	 */
+  protected function getAttachedFilename($fieldname = NULL) {
     global $uid;
-    if ($this->object->uid == $uid or $this->isAdmin($this->object)) { //TEST  THIS
-      $db = new Db();
-      $hidden = $db->select();
-
-      if ($isPresent) {
-        $operations['hide'] = 'Hide this offer';
-      }
-      else {
-        $operations['show'] = 'Show this offer';
-      }
-    }
+    return $uid . time();
   }
 
   /**
-   * Show or hide the ad.
-   *
-   * @param string ID
-   *   The id of the ad to operate on.
-   * @param string $operation
-   *   A key in the result of operations i.e. show, hide
+   * Default field callback
    */
-  function operate($id, $operation) {
-    $db = new Db();
-    switch ($operation) {
-      case 'show':
-        $db->query("UPDATE adverts SET hide = 0 WHERE id = '$id'");
-        break;
-      case 'hide':
-        $db->query("UPDATE adverts SET hide = 1 WHERE id = '$id'");
-        break;
-    }
+  public function currentUserId() {
+    global $uid;
+    return $uid;
   }
+
+  /**
+   * Default field callback
+   */
+  public function defaultExpires() {
+    return strtotime('+1 year');
+  }
+
 
 }

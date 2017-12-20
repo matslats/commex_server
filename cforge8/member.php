@@ -1,6 +1,5 @@
 <?php
 
-
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\user\Entity\User;
 
@@ -17,80 +16,86 @@ class Member extends CommexRestResource {
   /**
    * The structure of the member, not translated.
    * @return array
+   *
+   * @todo Get the translated fieldnames from the Drupal fields
    */
   function fields() {
     $fields = [
       'name' => [
         'fieldtype' => 'CommexFieldText',
-        'label' => 'First name & last name',
+        'label' => t('First name & last name'),
         'required' => TRUE,
         'sortable' => TRUE,
         'filter' => TRUE
       ],
       'mail' => [
         'fieldtype' => 'CommexFieldEmail',
-        'label' => 'Email',
+        'label' => t('Email'),
         'required' => TRUE,
         'filter' => TRUE
       ],
       'pass' => [
         // todo do we need a default random password?
         'fieldtype' => 'CommexFieldText',
-        'label' => 'Password',
+        'label' => t('Password'),
         'required' => FALSE,
         'view_access' => FALSE
       ],
       'phone' => [
         'fieldtype' => 'CommexFieldText',
-        'label' => 'Phone',
+        'label' => t('Phone'),
         'required' => FALSE,
         '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber',
       ],
       'aboutme' => array(
         'fieldtype' => 'CommexFieldText',
         'lines' => 4,
-        'label' => 'What would you do if you had enough money?',
+        //Todo load this field title
+        'label' => t('What would you do if you had enough money?'),
         'required' => FALSE,
       ),
       'street_address' => [
         'fieldtype' => 'CommexFieldText',
-        'label' => 'Street address',
+        'label' => t('Street address'),
         'required' => FALSE,
       ],
       'locality' => [
         'fieldtype' => 'CommexFieldEnum',
-        'label' => 'Neighbourhood',
+        'label' => t('Neighbourhood'),
         'required' => TRUE,
         'options_callback' => 'getLocalityOptions',
         'sortable' => TRUE,
         'filter' => TRUE,
       ],
-//      'coordinates' => [
-//        'fieldtype' => [
-//          'lat' => [
-//            'fieldtype' => 'CommexFieldNumber',
-//            'min' => -90,
-//            'max' => 90
-//          ],
-//          'lon' => [
-//            'fieldtype' => 'CommexFieldNumber',
-//            'min' => -180,
-//            'max' => 180
-//          ],
-//        ],
-//        'label' => 'Coordinates'
-//      ],
       'portrait' => array(
-        'label' => 'Portrait',
+        'label' => t('Portrait'),
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
       ),
       'balance' => array(
         'fieldtype' => 'CommexFieldVirtual',
-        'label' => 'Balance',
+        'label' => t('Balance'),
         'callback' => 'memberBalance'
       ),
     ];
+    // Could check for the presence of the field directly
+    if (\Drupal::moduleHandler()->moduleExists('cforge_geo')) {
+      $fields['coordinates'] = array(
+        'label' => t('Coordinates'),
+        'fieldtype' => array(
+          'lat' => array(
+            'fieldtype' => 'CommexFieldNumber',
+            'min' => -90,
+            'max' => 90
+          ),
+          'lon' => array(
+            'fieldtype' => 'CommexFieldNumber',
+            'min' => -180,
+            'max' => 180
+          ),
+        ),
+      );
+    }
     return $fields;
   }
 
@@ -111,6 +116,9 @@ class Member extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
+    if ($id == 'me') {
+      $id = \Drupal::currentUser()->id();
+    }
     $user = User::load($id);
     if (!$user) {
       throw new Exception('Unknown user ID: '.$id);
@@ -126,6 +134,15 @@ class Member extends CommexRestResource {
       // view() is required to load in the default image.
       'portrait' => $this->extractImgsFromField($user->user_picture, 'thumbnail')
     ];
+
+    if (\Drupal::moduleHandler()->moduleExists('cforge_geo')) {
+      if ($items = $user->coordinates->getValue()) {
+        $fieldData['coordinates'] = [
+          $items[0]['lat'],
+          $items[0]['lon']
+        ];
+      }
+    }
     return $values;
   }
 
@@ -153,11 +170,11 @@ class Member extends CommexRestResource {
       $user->status = \Drupal::currentUser()->hasPermission('administer users')
           || \Drupal::Config('user.settings')->get('register') == USER_REGISTER_VISITORS;
       $user->init->value = $obj->mail;
-      $user->setPassword($obj->pass);
     }
+    $user->setPassword($obj->pass);
     $user->setUsername($obj->name);
     $user->setEmail($obj->mail);
-    $countries = \Drupal\field\Entity\FieldConfig::load('user.user.address')->get('settings')['available_countries'];
+
     if ($lastspace = strrpos($obj->name, ' ')) {
       $firstname = substr($obj->name, 0, $lastspace);
       $lastname = substr($obj->name, $lastspace + 1);
@@ -166,15 +183,24 @@ class Member extends CommexRestResource {
       $firstname = $obj->name;
       $lastname = '';
     }
-    $user->address->setValue([
-      'given_name' => $firstname,
-      'family_name' => $lastname,
-      'address_line1' => $obj->street_address,
-      'dependent_locality' => $obj->locality,
-      'country_code' => reset($countries)
-    ]);
+    $address = $user->address->getValue();
+    $address['given_name'] = $firstname;
+    $address['family_name'] = $lastname;
+    $address['address_line1'] = $obj->street_address;
+    $address['dependent_locality'] = $obj->locality;
+    // Shouldn't need to set the country
+    //'country_code' => \Drupal\field\Entity\FieldConfig::load('user.user.address')->get('settings')['default_country']
+
     $user->phones->setValue($obj->phone);
     $user->notes->setValue($obj->aboutme);
+
+    if ($coords = $obj->coordinates) {
+      if (array_filter($coords)) {
+        // Borrowed from Drupal\geofield_map\Plugin\Field\FieldWidget\GeofieldMapWidget::massageFormValues();
+        $val = \Drupal::service('geofield.wkt_generator')->WktBuildPoint($coords);
+        $user->coordinates->setValue(['value' => $val]);
+      }
+    }
     //TODO
     //$account->user_picture->setValue($params['image']);
   }
@@ -209,11 +235,14 @@ class Member extends CommexRestResource {
       case 'changed':
         $query->sort('changed', $dir);
         break;
+      case 'access':
+        $query->sort('access', $dir);
+        break;
       case 'balance':
         // Must join to the wallet table....
       case 'geo':
       default:
-        trigger_error('Cannot sort by members by field: '.$field, E_USER_ERROR);
+        trigger_error('Cannot sort members by field: '.$field, E_USER_ERROR);
     }
     return $query->execute();
   }
@@ -266,7 +295,7 @@ class Member extends CommexRestResource {
     static $result = NULL;
     if (is_null($result)) {
       $currentUser = \Drupal::currentUser();
-      $result = $currentUser->hasPermission('administer users') or \Drupal::currentUser()->id() == $this->object->id;
+      $result = ($currentUser->hasPermission('administer users') or $currentUser->id() == $this->object->id);
     }
     return $result;
   }
