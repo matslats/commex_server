@@ -16,11 +16,13 @@ class CommexFieldImage extends CommexField {
     parent::__construct($definition, $commexObj);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
-      if (!$is_form_method) {
-        $props['format'] = 'image';
-      }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getViewDefinition() {
+    if ($props = parent::getViewDefinition()) {
+      $props['format'] = 'image';
       return $props;
     }
   }

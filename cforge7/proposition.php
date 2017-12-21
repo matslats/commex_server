@@ -1,5 +1,7 @@
 <?php
 
+//commex_require('CommexObjAd', TRUE);
+
 /**
  * @file
  * Defines the member/ commex resource

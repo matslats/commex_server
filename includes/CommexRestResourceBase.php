@@ -6,6 +6,8 @@
  * Do NOT Modify!
  */
 
+commex_require('CommexObj', TRUE);
+
 abstract class CommexRestResourceBase {
 
   /**
@@ -36,10 +38,39 @@ abstract class CommexRestResourceBase {
   protected $deleteConfirm = "Are you sure you want to delete this item?";
 
   /**
+   * Check that all the standard endpoints have required fields. It wasn't
+   * obvious how to jig the architecture to allow each type to check itself, for
+   * example to do more detailed checks, or where to document this!
+   */
+  function __construct($endpoint) {
+    switch($endpoint) {
+      case 'member';
+        $required = array('name', 'mail', 'pass', 'portrait');
+        break;
+      case 'offer':
+      case 'want':
+        // todo: check that user_id ia a references
+        $required = array('title', 'description', 'user_id', 'category');
+        break;
+      case 'transaction':
+        // todo: check that payer and payee are references
+        $required = array('amount', 'description', 'payer', 'payee');
+        break;
+      default:
+        throw new \Exception('Unsupported endpoint: '.$endpoint);
+    }
+
+    if ($missing = array_diff($required, array_keys($this->fields()))) {
+      throw new exception('Missing fields on '.get_class($this->resourcePlugin).': '.implode(', ', $missing));
+    }
+
+    $this->resource = $endpoint;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public function getObj(array $vals = array()) {
-    commex_require('CommexObj', TRUE);
     $this->object = new CommexObj($this);
     if ($vals) {
       $this->object->set($vals);

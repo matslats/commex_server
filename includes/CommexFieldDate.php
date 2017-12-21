@@ -17,15 +17,20 @@ class CommexFieldDate extends CommexFieldInteger {
     if (isset($definition['max'])) {
       $this->max = $definition['max'];
     }
-    $definition['format'] = 'html';
     parent::__construct($definition, $commexObj);
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function view() {
     // The API specified unixtime dates so this not needed.
     return date('d-M-Y', $this->value);
   }
-  
+
+  /**
+   * {@inheritdoc}
+   */
   public function setValue($value) {
     if (!is_numeric($value)) {
       $val = strtotime($value);
@@ -37,17 +42,19 @@ class CommexFieldDate extends CommexFieldInteger {
     parent::setValue($value);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
-      if ($is_form_method) {
-        $props['type'] = 'date';
-        $props['min'] = $this->min;
-        if ($this->max) {
-          $props['max'] = $this->max;
-        }
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      $props['type'] = 'date';
+      $props['min'] = $this->min;
+      if ($this->max) {
+        $props['max'] = $this->max;
       }
-      return $props;
+      $props['default'] = $this->view();
     }
+    return $props;
   }
 
 }

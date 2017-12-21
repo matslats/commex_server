@@ -8,8 +8,6 @@ commex_require('proposition', FALSE);
  */
 class offer extends proposition {
 
-  protected $resource = 'offer';
-
   function fields() {
     $fields = parent::fields();
     $fields['image'] = array(

@@ -31,26 +31,31 @@ class CommexFieldReference extends CommexFieldText {
     return $plugin->view($obj, array(), $deep);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
-      if ($is_form_method) {
-        if ($this->editable()) {
-          $props['type'] = 'textfield';
-          $props['resource'] = $this->foreignResource;
-          $props['autocomplete'] = 'fields='.$this->reffield.'&fragment=';
-          if (isset($props['default'])) {
-            $plugin = commex_get_resource_plugin($this->foreignResource);
-            $vals = $plugin->loadCommexFields($this->value);
-            $obj = $plugin->getObj($vals);
-            // Look up the default value label from its id.
-            $props['default'] = $obj->{$this->reffield};
-          }
-        }
-        else return array();
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      $props['type'] = 'textfield';
+      $props['resource'] = $this->foreignResource;
+      $props['autocomplete'] = 'fields='.$this->reffield.'&fragment=';
+      if (isset($props['default'])) {
+        $plugin = commex_get_resource_plugin($this->foreignResource);
+        $vals = $plugin->loadCommexFields($this->value);
+        $obj = $plugin->getObj($vals);
+        // Look up the default value label from its id.
+        $props['default'] = $obj->{$this->reffield};
       }
-      else {
-        $props['format'] = 'uri';
-      }
+      return $props;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getViewDefinition() {
+    if ($props = parent::getViewDefinition()) {
+      $props['format'] = 'uri';
       return $props;
     }
   }

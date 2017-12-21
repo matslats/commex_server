@@ -28,8 +28,8 @@ class CommexFieldBoolean extends CommexField {
   /**
    * {@inheritdoc}
    */
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
       $props['type'] = 'checkbox';
       $props['on'] = $this->on;
       $props['off'] = $this->off;

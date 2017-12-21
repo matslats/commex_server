@@ -9,7 +9,6 @@ module_load_include('inc', 'mcapi');
  */
 class credit extends CommexRestResource {
 
-  protected $resource = 'transaction';
   protected $entityTypeId = 'transaction';
 
   /**

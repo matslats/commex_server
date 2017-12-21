@@ -42,16 +42,12 @@ class CommexFieldVirtual extends CommexField {
   }
 
   /**
-   * Get the field definition for the appropriate http method
-   *
-   * @return array|null
+   * Determines whether this field can be edited by this user.
    */
-  public function getFieldDefinition($is_form_method) {
-    if ($is_form_method) {
-      return;
-    }
-    return parent::getFieldDefinition($is_form_method);
+  function editable() {
+    return FALSE;
   }
+
 
 }
 

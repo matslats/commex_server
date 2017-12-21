@@ -7,7 +7,6 @@
  */
 class member extends CommexRestResource {
 
-  protected $resource = 'user';
   protected $entityTypeId = 'user';
   protected $bundle = 'user';
 

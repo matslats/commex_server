@@ -3,19 +3,11 @@
 
 class member extends CommexRestResource {
 
-	protected $resource = 'member';
-
 	/**
 	 * The structure of the member, not translated.
 	 */
 	function fields() {
     $fields = [
-      'type' => [
-        'fieldtype' => 'CommexFieldText',
-        'label' => 'Account type',
-        'required' => TRUE,
-        'edit_access' => 'isAdmin'
-      ],
       'name' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Given name & second name',
@@ -33,6 +25,12 @@ class member extends CommexRestResource {
         'label' => 'Email',
         'required' => TRUE
       ],
+      'type' => [
+        'fieldtype' => 'CommexFieldText',
+        'label' => 'Account type',
+        'required' => TRUE,
+        'edit_access' => 'isAdmin'
+      ],
       'phone' => [
         'fieldtype' => 'CommexFieldText',
         'label' => 'Phone',
@@ -49,7 +47,7 @@ class member extends CommexRestResource {
         'required' => TRUE,
         'options_callback' => 'getLocalityOptions'
       ],
-      'image' => [
+      'portrait' => [
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
         'label' => 'Portrait'
@@ -177,7 +175,7 @@ class member extends CommexRestResource {
 			'mail' => $user['email'],
 			'phone' => $user['phone_m'],
 			'subarea' => $user['subarea'],
-			'image' => $user['picture']
+			'portrait' => $user['picture']
 		);
 		return $values;
 	}
@@ -204,8 +202,18 @@ class member extends CommexRestResource {
 //    $user->phones->setValue($obj->phone);
 //    $user->notes->setValue($obj->bio);
     //TODO
-    //$account->portrait->setValue($params['image']);
+    //$account->portrait->setValue($obj->portrait);
   }
+
+
+	/**
+	 * {@inheritdoc}
+	 */
+  protected function getAttachedFilename($fieldname = NULL) {
+    global $uid;
+    return $uid . time();
+  }
+
 
 	/**
 	 * {@inheritdoc}

@@ -8,7 +8,5 @@ commex_require('proposition', FALSE);
  */
 class want extends proposition {
 
-  protected $resource = 'want';
-
 
 }

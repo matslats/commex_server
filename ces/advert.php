@@ -39,7 +39,7 @@ class advert extends CommexRestResource {
         'min' => 'today:add:1:day',
         'max' => 'today:add:1:year'
       ],
-      'uid' => [
+      'user_id' => [
         'label' => 'Advertiser',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
@@ -78,10 +78,13 @@ class advert extends CommexRestResource {
     $conditions[] = "ad_type = '$ad_type'";
 
 		// Build a query on your entity type, using the filters passed in $params
-		if (isset($params['uid'])) {
-		  $conditions[] = "uid = '".$params['uid']."'";
+		if (isset($params['user_id'])) {
+		  $conditions[] = "uid = '".$params['user_id']."'";
+      if ($params['user_id'] != $uid) {
+        $conditions[] = 'hide = 0';
+      }
 		}
-    elseif (!$this->ownerOrAdmin()) {
+    elseif (!$this->isAdmin()) {
       //hide the 'hidden' ads if we're not filtering by a specific user
       $conditions[] = 'hide = 0';
     }
@@ -101,9 +104,9 @@ class advert extends CommexRestResource {
 
 		/*
      * We must support sorting on every field where 'sortable' = TRUE
-     * $params[sort]=name:ASC,uid:DESC
+     * $params[sort]=name:ASC,user_id:DESC
      * translates to
-     * " ORDER BY name ASC, UID DESC "
+     * " ORDER BY name ASC, user_id DESC "
      */
     if (empty($params['sort'])) {
       $params['sort'] = 'expires,DESC';
@@ -112,7 +115,7 @@ class advert extends CommexRestResource {
     $dir  = strtoupper($dir);
     switch ($field) {
       case 'category':
-      case 'uid':
+      case 'user_id':
         break;
       case 'expires':
         $field = 'date_expires';
@@ -142,7 +145,7 @@ class advert extends CommexRestResource {
 		$ad = reset($ads);
 		return array(
 			'id' => $ad['id'],
-			'uid' => $ad['uid'],
+			'user_id' => $ad['uid'],
 			'adtype' => $ad['ad_type'],
 			'oftype' => $ad['offering_type'],
 			'category' => $ad['category'],
@@ -181,8 +184,8 @@ class advert extends CommexRestResource {
 		$fields[] =  "description = '$obj->description'";
     $fields[] =  "category = '$obj->category'"; //TODO categories have names
 		$fields[] =  "keywords = '$obj->keywords'";
-		$fields[] =  "date_expires = '".date('Y-m-d', $obj->expires)."'";
-		$fields[] =  "uid = '$obj->uid'";
+		$fields[] =  "date_expires = '".date('Y-m-d', $obj->expires ? : $this->defaultExpires())."'";
+		$fields[] =  "uid = '$obj->user_id'";
 		$fields[] =  "date_edited = NOW()";
 		$query .= implode(', ', $fields);
 		//todo need to show the incoming pic should be managed
@@ -231,7 +234,7 @@ class advert extends CommexRestResource {
    */
   public function ownerOrAdmin() {
     global $uid;
-    if ($this->object->uid == $uid) {
+    if ($this->object->user_id == $uid) {
       return TRUE;
     }
     return $this->isAdmin();

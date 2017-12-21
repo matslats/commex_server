@@ -12,7 +12,6 @@ use Drupal\field\Entity\FieldConfig;
  */
 class Transaction extends CommexRestResource {
 
-  protected $resource = 'transaction';
   protected $entityTypeId = 'mcapi_transaction';
   protected $bundle = 'mcapi_transaction';
 
@@ -145,6 +144,8 @@ class Transaction extends CommexRestResource {
         // This is not a compound field, so requires a single value
         $amount = reset($amount);
       }
+      echo $id;
+      print_r($transaction->payer->getValue());
       $values = parent::loadCommexFields($id) + [
         'id' => $id,
         // Note we are giving the user ID not the wallet ID, otherwise we need to define a new REST endpoint

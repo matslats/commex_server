@@ -25,10 +25,24 @@ class CommexFieldInteger extends CommexFieldNumber {
     return (int)$this->{$prop};
   }
 
-  public function getFieldDefinition($is_form_method) {
-    $props = parent::getFieldDefinition($is_form_method);
-    $props['type'] = 'number';
-    return $props;
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      $props['type'] = 'number';
+      return $props;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getViewDefinition() {
+    if ($props = parent::getViewDefinition()) {
+      $props['type'] = 'number';
+      return $props;
+    }
   }
 }
 

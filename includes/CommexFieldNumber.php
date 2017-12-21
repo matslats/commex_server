@@ -35,17 +35,18 @@ class CommexFieldNumber extends CommexField {
     parent::setValue($val);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
-      // Defaults to a textfield
-      if ($is_form_method) {
-        $props['min'] = $this->min;
-        if ($this->max) {
-          $props['max'] = $this->max;
-        }
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      $props['min'] = $this->min;
+      if ($this->max) {
+        $props['max'] = $this->max;
       }
       return $props;
     }
   }
+
 }
 

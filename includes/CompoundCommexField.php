@@ -63,30 +63,18 @@ class CompoundCommexField extends CommexField {
     return $vals;
   }
 
-
   /**
-   * Get the field definition for the appropriate http method.
-   *
-   * @return array|null
+   * {@inheritdoc}
    */
-  public function getFieldDefinition($is_form_method) {
-    $def['label'] = $this->label;
-    if ($is_form_method) {
-      foreach ($this->subFields as $key => $field) {
-        if ($val = $field->getFieldDefinition(TRUE)) {
-          $def['type'][$key] = $val;
-        }
+  public function getFormDefinition($existing = FALSE) {
+    $props['label'] = $this->label;
+    foreach ($this->subFields as $key => $field) {
+      if ($val = $field->getFormDefinition($existing)) {
+        $props['type'][$key] = $val;
       }
-      $def['required'] = $this->required ?: 0;
+      $props['required'] = $this->required ?: 0;
     }
-    else {
-      foreach ($this->subFields as $key => $field) {
-        //$def['format'][$key] = $field->getFieldDefinition('GET');
-        //unset($def['format'][$key]['sortable']);
-      }
-      $def['format'] = 'html';
-    }
-    return $def;
+    return $props;
   }
 
 }

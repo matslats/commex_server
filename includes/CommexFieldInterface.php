@@ -27,15 +27,20 @@ interface CommexFieldInterface {
    */
   public function view();
 
-
   /**
-   * Get the field definition for the appropriate http method
+   * Get definitions of fields suitable for populating forms
    *
-   * $is_form_method
-   *   TRUE if the method is PATCH or POST FALSE if it is GET
+   * @param bool $existing
+   *   TRUE if this an update form, FALSE for a new object
    *
-   * @return array|null
+   * @return array
    */
-  public function getFieldDefinition($is_form_method);
-
+  public function getFormDefinition($existing = FALSE);
+  
+  /**
+   * Get definitions of fields suitable for display functions
+   *
+   * @return array
+   */
+  public function getViewDefinition();
 }

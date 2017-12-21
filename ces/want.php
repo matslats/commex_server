@@ -6,9 +6,6 @@ commex_require('advert', FALSE);
  * Class for handling the Wants resource
   */
 class want extends advert {
-
-	protected $resource = 'want';
-
 	/**
 	 * {@inheritdoc}
 	 */
@@ -32,7 +29,7 @@ class want extends advert {
 		$want = reset($wants);
     return array(
 			'id' => $want['id'],
-			'uid' => $want['uid'],
+			'user_id' => $want['uid'],
 			'adtype' => $want['ad_type'],
 			'oftype' => $want['offering_type'],
 			'category' => $want['category'],

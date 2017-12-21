@@ -16,12 +16,17 @@ class CommexFieldText extends CommexField {
     parent:: __construct($definition, $commexObj);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    $props = parent::getFieldDefinition($is_form_method);
-    if ($is_form_method && isset($props['type']) and $props['type'] == 'textarea') {
-      $props['lines'] = $this->lines;
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      if (isset($props['type']) and $props['type'] == 'textarea') {
+        $props['lines'] = $this->lines;
+      }
+      return $props;
     }
-    return $props;
   }
+
 
 }

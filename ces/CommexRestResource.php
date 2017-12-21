@@ -1,8 +1,6 @@
 <?php
 
-commex_require('CommexObj', TRUE);
 commex_require('CommexRestResourceBase', TRUE);
-//commex_require('db_class', FALSE);
 
 /**
  * Base class for REST endpoints
@@ -58,7 +56,6 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
 	 * @return boolean
 	 */
 	public static function authenticate($username, $password) {
-		echo 'authenticate';
 		global $uid, $user;
     $username = strtoupper($username);
 		$db = new Db();
@@ -95,7 +92,9 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
   /**
    * Generate filename (before having saved the thing).
    */
-  abstract protected function getAttachedFilename($fieldname = NULL);
+  protected function getAttachedFilename($fieldname = NULL) {
+    
+  }
 
 
   /**

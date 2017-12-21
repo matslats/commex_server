@@ -5,11 +5,11 @@ use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * @file
+ *
  * Defines the want/ commex resource
  */
 class Want extends CommexRestResource {
 
-  protected $resource = 'want';
   protected $entityTypeId = 'smallad';
   protected $bundle = 'want';
 

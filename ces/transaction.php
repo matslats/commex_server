@@ -7,8 +7,6 @@
  */
 class Transaction extends CommexRestResource {
 
-	protected $resource = 'transaction';
-
   /**
    * The structure of the transaction, not translated.
    *
@@ -23,14 +21,14 @@ class Transaction extends CommexRestResource {
         'filter' => 'string',
         'edit_access' => 'transactionEditAccess'
       ],
-      'buyer' => [
+      'payer' => [
         'label' => 'Buyer',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
         'required' => TRUE,
         'edit_access' => 'transactionEditAccess'
       ],
-      'seller' => [
+      'payee' => [
         'label' => 'Seller',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
@@ -76,11 +74,11 @@ class Transaction extends CommexRestResource {
   public function getList(array $params, $offset, $limit) {
 		global $uid;
 		$conditions[] = "xid = '".substr($uid, 0, 4) ."'";
-    if (!empty($params['buyer'])) {
-      $conditions[] = "buyer = ".$params['buyer'];
+    if (!empty($params['payer'])) {
+      $conditions[] = "buyer = ".$params['payer'];
     }
-    if (!empty($params['seller'])) {
-      $conditions[] = "seller = ".$params['seller'];
+    if (!empty($params['payee'])) {
+      $conditions[] = "seller = ".$params['payee'];
     }
 
     // Filter by name or part-name.
@@ -148,8 +146,8 @@ class Transaction extends CommexRestResource {
       $transaction = $result[0];
       $fieldData = parent::loadCommexFields($id) + array(
         // Note we are giving the user ID not the wallet ID, otherwise we need to define a new REST endpoint
-        'buyer' => $transaction['buyer'],
-        'seller' => $transaction['seller'],
+        'payer' => $transaction['buyer'],
+        'payee' => $transaction['seller'],
         'created' => strtotime($transaction['date_entered']),
         'amount' => $transaction['seller_amount'],
         'description' => $transaction['description'],
@@ -181,8 +179,8 @@ class Transaction extends CommexRestResource {
       return $errors;
     }
 
-    $buyer_xid = substr($obj->buyer, 0, 4);
-    $seller_xid = substr($obj->seller, 0, 4);
+    $buyer_xid = substr($obj->payer, 0, 4);
+    $seller_xid = substr($obj->payee, 0, 4);
     $db = new Db();
     $results = $db->select("SELECT xid, nid, levy_rate, conversion_rate FROM exchanges WHERE xid IN ('$buyer_xid', '$seller_xid')");
     foreach ($results as $exchange) {
@@ -198,8 +196,8 @@ class Transaction extends CommexRestResource {
       //update the transaction in the db
       $db->query("UPDATE transactions SET
         type = 'sess',
-        seller = '$obj->seller',
-        buyer = '$obj->buyer',
+        seller = '$obj->payee',
+        buyer = '$obj->payer',
         seller_nid = '".$exchanges[$seller_xid]['nid']."',
         buyer_nid = '".$exchanges[$buyer_xid]['nid']."',
         seller_amount = $obj->amount,
@@ -220,8 +218,8 @@ class Transaction extends CommexRestResource {
       //save a new transaction in the db
       $query = "INSERT INTO transactions SET
         type = 'sess',
-        seller = '$obj->seller',
-        buyer = '$obj->buyer',
+        seller = '$obj->payee',
+        buyer = '$obj->payer',
         seller_nid = '".$exchanges[$seller_xid]['nid']."',
         buyer_nid = '".$exchanges[$buyer_xid]['nid']."',
         seller_amount = '$obj->amount',
@@ -244,16 +242,6 @@ class Transaction extends CommexRestResource {
       $obj->id = $db->last_id();
     }
 
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function view(CommexObj $obj, array $fieldnames = array(), $expand = 0) {
-    $result = parent::view($obj, $fieldnames, $expand);
-    $result['buyer'] = $result['buyer'];
-    $result['seller'] = $result['seller'];
-    return $result;
   }
 
   /**
@@ -291,7 +279,7 @@ class Transaction extends CommexRestResource {
    */
   function ownerOrAdmin() {
     global $uid;
-    if ($this->object->buyer == $uid or $this->object->seller == $uid) {
+    if ($this->object->payer == $uid or $this->object->payee == $uid) {
       return TRUE;
     }
     global $user;

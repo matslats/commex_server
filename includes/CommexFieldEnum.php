@@ -59,21 +59,23 @@ class CommexFieldEnum extends CommexField {
     else throw new \Exception('Multiple values provided for single value field');
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
+      $props['options'] = $this->options;
+      $props['multiple'] = $this->multiple;
+      return $props;
+    }
+  }
 
   /**
-   * Get the field definition for the appropriate http method
-   *
-   * @return array|null
+   * {@inheritdoc}
    */
-  public function getFieldDefinition($is_form_method) {
-    if ($props = parent::getFieldDefinition($is_form_method)) {
-      if ($is_form_method) {
-        $props['options'] = $this->options;
-        $props['multiple'] = $this->multiple;
-      }
-      elseif ($this->filter) {
-        $props['filter'] = $this->options;
-      }
+  public function getViewDefinition() {
+    if ($props = parent::getViewDefinition()) {
+      $props['filter'] = $this->options;
       return $props;
     }
   }

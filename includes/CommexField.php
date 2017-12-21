@@ -3,7 +3,7 @@
 /**
  * This file contains the base field object with methods to
  * populate, view and show the definition of the field. Each content type
- * (member, offer, transaction, etc) must have its fields defined. 
+ * (member, offer, transaction, etc) must have its fields defined.
  */
 abstract class CommexField implements CommexFieldInterface{
 
@@ -134,24 +134,6 @@ abstract class CommexField implements CommexFieldInterface{
   }
 
   /**
-   * Get the field definition for the appropriate http method
-   *
-   * $is_form_method
-   *   TRUE if the method is PATCH or POST FALSE if it is GET
-   *
-   * @return array
-   */
-  public function getFieldDefinition($is_form_method) {
-    $props = array();
-    if ($is_form_method) {
-      return $this->getFormDefinition($is_form_method == 'PATCH');
-    }
-    elseif ($this->viewable()) {
-      return $thisgetViewDefinition();
-    }
-  }
-
-  /**
    * Get definitions of fields suitable for populating forms
    *
    * @param bool $existing
@@ -160,21 +142,20 @@ abstract class CommexField implements CommexFieldInterface{
    * @return array
    */
   public function getFormDefinition($existing = FALSE) {
-    $props = array();
     // Show the field:
-    //   If the object already exists and is exitable
+    //   If the object already exists and is editable
     //   if the object doesn't exist
-    //only show the widgets if this field is editable
-
-    $props['label'] = $this->label;
+    // Only show the widgets if this field is editable
     if ($this->editable()) {
+      $props = array();
+      $props['label'] = $this->label;
       $props['type'] = $this->widget;
       $props['required'] = $this->required ?: 0;
       if (!$existing) {
         $props['default'] = $this->value;
       }
+      return $props;
     }
-    return $props;
   }
 
 
@@ -184,10 +165,11 @@ abstract class CommexField implements CommexFieldInterface{
    * @return array
    */
   public function getViewDefinition() {
-    $props = array();
-    $props['label'] = $this->label;
-    $props['format'] = $this->format;
-    $props['sortable'] = $this->sortable;
+    $props = array(
+      'label' => $this->label,
+      'format' => $this->format,
+      'sortable' => $this->sortable
+    );
     if ($this->filter) {
       $props['filter'] = $this->filter;
       if (function_exists($this->filter)){

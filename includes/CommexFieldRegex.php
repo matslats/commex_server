@@ -15,12 +15,15 @@ class CommexFieldRegex extends CommexFieldText {
     parent:: __construct($definition, $commexObj);
   }
 
-  public function getFieldDefinition($is_form_method) {
-    $props = parent::getFieldDefinition($is_form_method);
-    if ($is_form_method) {
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormDefinition($existing = FALSE) {
+    if ($props = parent::getFormDefinition($existing)) {
       $props['regex'] = $this->regex;
+      return $props;
     }
-    return $props;
   }
+
 
 }

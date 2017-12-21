@@ -9,7 +9,6 @@ use Drupal\user\Entity\User;
  */
 class Member extends CommexRestResource {
 
-  protected $resource = 'member';
   protected $entityTypeId = 'user';
   protected $bundle = 'user';
 

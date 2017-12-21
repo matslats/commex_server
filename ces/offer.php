@@ -7,8 +7,6 @@ commex_require('advert', FALSE);
   */
 class offer extends advert {
 
-	protected $resource = 'offer';
-
 	/**
 	 * The structure of the offer, not translated.
 	 */
