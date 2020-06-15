@@ -5,7 +5,7 @@
  * Defines the transaction/ commex resource
  *
  */
-class Transaction extends CommexRestResource {
+class CommexTransaction extends CommexRestResource {
 
   /**
    * The structure of the transaction, not translated.
@@ -25,22 +25,19 @@ class Transaction extends CommexRestResource {
         'label' => 'Buyer',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
-        'required' => TRUE,
-        'edit_access' => 'transactionEditAccess'
+        'required' => TRUE
       ],
       'payee' => [
         'label' => 'Seller',
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.id',
-        'required' => TRUE,
-        'edit_access' => 'transactionEditAccess'
+        'required' => TRUE
       ],
       'created' => [
         'label' => 'Date',
         'fieldtype' => 'CommexFieldVirtual',
         'callback' => 'transactionCreated',
-        'sortable' => TRUE,
-        'edit_access' => 'transactionEditAccess'
+        'sortable' => TRUE
       ],
       'amount' => [
         'label' => 'Amount',
@@ -81,6 +78,11 @@ class Transaction extends CommexRestResource {
       $conditions[] = "seller = ".$params['payee'];
     }
 
+    global $user;
+    if ($user['usertype'] != 'adm') {
+      $conditions[] = "buyer = '$uid' OR seller = '$uid'";
+    }
+
     // Filter by name or part-name.
     // @todo use the entity label field and put this is in the base class
     if (!empty($params['fragment'])) {
@@ -105,9 +107,8 @@ class Transaction extends CommexRestResource {
       default:
         trigger_error('Cannot sort by transactions by field: '.$field, E_USER_ERROR);
     }
-
     $query .= " LIMIT $offset, $limit ";
-		$db = new Db();
+		$db = new CommexDb();
 		$results = $db->select($query);
     $transactions = [];
     foreach ($results as $result){
@@ -141,7 +142,7 @@ class Transaction extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-		$db = new Db();
+		$db = new CommexDb();
 		if ($result = $db->select("SELECT * FROM transactions where txid = $id"))  {
       $transaction = $result[0];
       $fieldData = parent::loadCommexFields($id) + array(
@@ -163,7 +164,7 @@ class Transaction extends CommexRestResource {
   function saveNativeEntity(CommexObj $obj, &$errors = array()) {
     global $uid;
 //    if ($obj->id) {
-//      $db = new Db();
+//      $db = new CommexDb();
 //      if ($result = $db->select("SELECT * FROM transactions WHERE txid = ".$obj->id)) {
 //        $transaction = (object)$result[0];
 //      }
@@ -181,7 +182,7 @@ class Transaction extends CommexRestResource {
 
     $buyer_xid = substr($obj->payer, 0, 4);
     $seller_xid = substr($obj->payee, 0, 4);
-    $db = new Db();
+    $db = new CommexDb();
     $results = $db->select("SELECT xid, nid, levy_rate, conversion_rate FROM exchanges WHERE xid IN ('$buyer_xid', '$seller_xid')");
     foreach ($results as $exchange) {
       $exchanges[$exchange['xid']] = $exchange;
@@ -190,7 +191,7 @@ class Transaction extends CommexRestResource {
 		$sngBuyerConversionRate	= $exchanges[$buyer_xid]['conversion_rate'];
     $curSellerAmount	= round(($obj->amount*($sngSellerConversionRate/$sngBuyerConversionRate)),2);
 
-    $db = new Db();
+    $db = new CommexDb();
     if ($obj->id) {
       // NOT TESTED
       //update the transaction in the db
@@ -248,7 +249,7 @@ class Transaction extends CommexRestResource {
    * virtual field callback
    */
   function transactionCreated($id) {
-		$db = new Db();
+		$db = new CommexDb();
 		if ($timestamp = $db->select1("SELECT date_entered FROM transactions where txid = ".$id)) {
       return date('d M Y', strtotime($timestamp));
     }
@@ -257,17 +258,8 @@ class Transaction extends CommexRestResource {
     }
   }
 
-  /**
-   * field edit access callback
-   */
-  function transactionEditAccess() {
-    //editing not allowed by anybody!
-    return FALSE;
-  }
-
-
   function delete($entity_id) {
-    $db = new Db();
+    $db = new CommexDb();
     $db->query("DELETE FROM transactions WHERE txid = $entity_id");
     echo 'deleted transaction';
     return TRUE;
@@ -277,14 +269,46 @@ class Transaction extends CommexRestResource {
   /*
 	 * {@inheritdoc}
    */
-  function ownerOrAdmin() {
-    global $uid;
-    if ($this->object->payer == $uid or $this->object->payee == $uid) {
+  function ownerOrAdmin($existing = FALSE) {
+    if ($existing) {
+      return FALSE;
+    }
+    else {
+      // anyone can create a transaction.
       return TRUE;
     }
-    global $user;
-    return $user['usertype'] == 'adm';
   }
+
+  /**
+   * Access callback for the editble fields, description and amount, which can
+   * be edited by the owner within 45 fdays and by admin any time
+   */
+  function transactionEditAccess($existing = FALSE) {
+    if ($existing) {
+      global $uid;
+      if ($this->object->payee == $uid) {
+        // only transactions younger than 45 days can be edited
+        if (time() - $this->object->created < 3888000) {
+          return TRUE;
+        }
+      }
+      global $user;
+      return $user['usertype'] == 'adm';
+    }
+    else {
+      return TRUE;
+    }
+
+  }
+
+  public function getOptions($id = NULL, $operation = NULL) {
+    $options = parent::getOptions($id, $operation);
+    if (in_array('DELETE', $options)) {
+      unset($options[array_search('DELETE', $options)]);
+    }
+    // Only show the list of transactions for the current user.
+  }
+
 
 }
 

@@ -5,7 +5,7 @@ commex_require('advert', FALSE);
 /**
  * Class for handling the Wants resource
   */
-class want extends advert {
+class CommexWant extends advert {
 	/**
 	 * {@inheritdoc}
 	 */
@@ -19,7 +19,7 @@ class want extends advert {
 	 */
 	function loadCommexFields($id) {
 		// Load your offer and put all its field values into an array ready for CommexObj
-		$db = new Db();
+		$db = new CommexDb();
 		$wants = $db->select("SELECT * FROM adverts WHERE id = '$id'");
 
 		if (empty($wants)) {
@@ -59,7 +59,7 @@ class want extends advert {
     global $uid;
     $operations = array();
     if ($this->ownerOrAdmin()) {
-      $db = new Db();
+      $db = new CommexDb();
       $hidden = $db->select1("SELECT hide from adverts WHERE id = '$id'");
       if ($hidden) {
         $operations['show'] = 'Show this want';
@@ -79,7 +79,7 @@ class want extends advert {
    *   A key in the result of operations i.e. show, hide
    */
   function operate($id, $operation) {
-    $db = new Db();
+    $db = new CommexDb();
     switch ($operation) {
       case 'show':
         $db->query("UPDATE adverts SET hide = 0 WHERE id = '$id'");

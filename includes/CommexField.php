@@ -134,7 +134,7 @@ abstract class CommexField implements CommexFieldInterface{
   }
 
   /**
-   * Get definitions of fields suitable for populating forms
+   * Get definitions of fields suitable for populating forms of new or existing objects
    *
    * @param bool $existing
    *   TRUE if this an update form, FALSE for a new object
@@ -144,9 +144,9 @@ abstract class CommexField implements CommexFieldInterface{
   public function getFormDefinition($existing = FALSE) {
     // Show the field:
     //   If the object already exists and is editable
-    //   if the object doesn't exist
+    //   if the object hasn't been created yet
     // Only show the widgets if this field is editable
-    if ($this->editable()) {
+    if ($this->editable($existing)) {
       $props = array();
       $props['label'] = $this->label;
       $props['type'] = $this->widget;
@@ -184,9 +184,9 @@ abstract class CommexField implements CommexFieldInterface{
   /**
    * Determines whether this field can be edited by this user.
    */
-  function editable() {
-    if ($this->edit_access) {
-      return $this->commexObj->resourcePlugin->{$this->edit_access}();
+  function editable($existing = FALSE) {
+    if ($existing && $this->edit_access) {
+      return $this->commexObj->resourcePlugin->{$this->edit_access}($existing);
     }
     else {
       // No callback means the the field is editable

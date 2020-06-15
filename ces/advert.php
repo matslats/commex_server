@@ -3,7 +3,7 @@
 /**
  * Class for handling the offerings resource
   */
-class advert extends CommexRestResource {
+abstract class advert extends CommexRestResource {
 
 	/**
 	 * The structure of the offer, not translated.
@@ -89,7 +89,8 @@ class advert extends CommexRestResource {
       $conditions[] = 'hide = 0';
     }
 		if (isset($params['category'])) {
-		  $conditions[] = "category = '".$params['category']."'";
+      $cat_name = $this->categoryName($params['category']);
+		  $conditions[] = "category = '".$cat_name."'";
     }
 		if (isset($params['title'])) {
 		  $conditions[] = "title = '".$params['title']."'";
@@ -98,7 +99,7 @@ class advert extends CommexRestResource {
 		  $conditions[] = "keywords LIKE '%".$params['keywords']."%'";
     }
 		if (isset($params['fragment'])) {
-		  $conditions[] = "(title LIKE '%".$params['fragment']."%' OR description LIKE '%".$params['fragment']."%' OR category like LIKE '%".$params['fragment']."%' OR keywords LIKE '%".$params['fragment']."%' )";
+		  $conditions[] = "(title LIKE '%".$params['fragment']."%' OR description LIKE '%".$params['fragment']."%' OR category LIKE '%".$params['fragment']."%' OR keywords LIKE '%".$params['fragment']."%' )";
     }
 		$query .= " WHERE ". implode(' AND ', $conditions);
 
@@ -109,7 +110,7 @@ class advert extends CommexRestResource {
      * " ORDER BY name ASC, user_id DESC "
      */
     if (empty($params['sort'])) {
-      $params['sort'] = 'expires,DESC';
+      $params['sort'] = 'date_edited,DESC';
     }
     list($field, $dir) = explode(',', $params['sort']);
     $dir  = strtoupper($dir);
@@ -122,8 +123,8 @@ class advert extends CommexRestResource {
         break;
     }
     $query .= " ORDER BY $field $dir LIMIT $offset, $limit ";
-		$db = new Db();
     $ids =  array();
+		$db = new CommexDb();
 		foreach ($db->select($query) as $row) {
 			$ids[] = $row['id'];
 		}
@@ -135,7 +136,7 @@ class advert extends CommexRestResource {
 	 */
 	function loadCommexFields($id) {
 		// Load your offer and put all its field values into an array ready for CommexObj
-		$db = new Db();
+		$db = new CommexDb();
 		$ads = $db->select("SELECT * FROM adverts WHERE id = '$id'");
 
 		if (empty($ads)) {
@@ -164,7 +165,7 @@ class advert extends CommexRestResource {
 	function saveNativeEntity(CommexObj $obj, &$errors = array()) {
     global $uid;
 		$xid = substr($uid, 0, 4);
-		$db = new Db();
+		$db = new CommexDb();
 		$result = $db->select("SELECT `nid`, `country_code` FROM `exchanges` WHERE `xid` = '$xid' LIMIT 1");
     list($nid, $country) = array_values($result[0]);
 		//"insert into users set field1 = a, field2 = b)"
@@ -177,6 +178,7 @@ class advert extends CommexRestResource {
       $fields[] = "ad_type = '$obj->ad_type'";
       $fields[] = "date_starts = NOW()";
       $fields[] =  "nid = '$nid'";
+      $fields[] =  "xid = '$xid'";
       $fields[] =  "display_nid = '$nid'";
       $fields[] =  "country = '$country'";
 		}
@@ -196,7 +198,7 @@ class advert extends CommexRestResource {
 		if ($obj->id) {
 			$query .= " WHERE id = '$obj->id' ";
 		}
-		$db = new Db();
+		$db = new CommexDb();
 		$db->query($query);
 		if (!$obj->id) {
 			$obj->id = $db->last_id();
@@ -207,7 +209,7 @@ class advert extends CommexRestResource {
 	 * {@inheritdoc}
 	 */
 	public function delete($entity_id) {
-		$db = new Db();
+		$db = new CommexDb();
 		$result = $db->query("DELETE FROM adverts where id = " .$entity_id);
     return TRUE;
 	}
@@ -275,4 +277,10 @@ class advert extends CommexRestResource {
   }
 
 
+  function categoryName($id) {
+    global $uid;
+		$db = new CommexDb();
+    $xid = substr($uid, 0, 4);
+    return $db->select1("SELECT category FROM offering_categories WHERE xid = '$xid' AND id = '$id'");
+  }
 }

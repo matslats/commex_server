@@ -10,7 +10,7 @@ use Drupal\field\Entity\FieldConfig;
  *
  * Defines the member/ commex resource
  */
-class Transaction extends CommexRestResource {
+class CommexTransaction extends CommexRestResource {
 
   protected $entityTypeId = 'mcapi_transaction';
   protected $bundle = 'mcapi_transaction';
@@ -28,6 +28,7 @@ class Transaction extends CommexRestResource {
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
       ],
+      // These are problematic because we select the wallet name on the transaction form, but the
       'payer' => [
         'label' => 'Payer',
         'fieldtype' => 'CommexFieldReference',
@@ -149,8 +150,8 @@ class Transaction extends CommexRestResource {
       $values = parent::loadCommexFields($id) + [
         'id' => $id,
         // Note we are giving the user ID not the wallet ID, otherwise we need to define a new REST endpoint
-        'payer' => $transaction->payer->entity->getOwnerId(),
-        'payee' => $transaction->payee->entity->getOwnerId(),
+        'payer' => $transaction->payer->entity->id(),
+        'payee' => $transaction->payee->entity->id(),
         'amount' => $amount,
         'description' => $transaction->description->value,//needs sanitising
         'state' => $transaction->state->target_id,

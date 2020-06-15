@@ -1,12 +1,10 @@
 <?php
 
-//commex_require('CommexObjAd', TRUE);
-
 /**
  * @file
  * Defines the member/ commex resource
  */
-class proposition extends CommexRestResource {
+abstract class proposition extends CommexRestResource {
 
   protected $entityTypeId = 'node';
 
@@ -14,22 +12,22 @@ class proposition extends CommexRestResource {
    * The structure of the proposition, not translated.
    */
   function fields() {
-    return array(
+    $fields = array(
       'title' => array(
-        'label' => 'Headline',
+        'label' => 'One line description',// from offers_wants module
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
         'filter' => TRUE,
       ),
       'description' => array(
-        'label' => 'Full description',
+        'label' => field_read_instance('node', 'body', 'proposition')['label'],
         'fieldtype' => 'CommexFieldText',
         'lines' => 4,
         'required' => FALSE,
         'filter' => TRUE,
       ),
       'user_id' => array(
-        'label' => 'Owner',
+        'label' => t('Owner'),
         'fieldtype' => 'CommexFieldReference',
         'reference' => 'member.name',
         'default_callback' => 'currentUserId',
@@ -39,7 +37,7 @@ class proposition extends CommexRestResource {
         '_comment' => 'defaults to the current user',
       ),
       'expires' => array(
-        'label' => 'Display until',
+        'label' => 'Display until',// from offers_wants module
         'fieldtype' => 'CommexFieldDate',//can be html 5 or a js component
         'default_callback' => 'defaultExpiryDate',
         'min' => 'today:add:1:day',
@@ -55,6 +53,20 @@ class proposition extends CommexRestResource {
         'filter' => 'getCategoryOptions',
       )
     );
+    $vid = db_query("SELECT vid FROM {taxonomy_vocabulary} WHERE machine_name = 'offers_wants_types'")->fetchField();
+    if (count(taxonomy_get_tree($vid)) > 1) {
+      $fields['type'] = array(
+        'label' => 'Type',
+        'fieldtype' => 'CommexFieldEnum',
+        'required' => TRUE,
+        'filter' => 'getTypeOptions',
+      );
+      foreach (taxonomy_get_tree($vid) as $term) {
+        // Hope there are no translation issues....
+        $fields['type']['options'][$term->tid] = $term->name;
+      }
+    }
+    return $fields;
   }
 
   /**
@@ -79,16 +91,20 @@ class proposition extends CommexRestResource {
       unset($node->menu);
     }
     global $language;
+    $node->language = $language->language;
     $node->title = $obj->title;
-    $node->body[$language->language][0] = array(
+    $node->body[LANGUAGE_NONE][0] = array(
       'value' => $obj->description,
       'format' => 'editor_filtered_html'
     );
     $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'] = $obj->category;
+    if ($obj->has('type')) {
+      $node->offers_wants_types[LANGUAGE_NONE][0]['tid'] = $obj->type;
+    }
     $node->want = $this->resource == 'want';
     $node->end = $obj->expires;
     $node->uid = $obj->user_id ?: $GLOBALS['user']->uid;
-    if (property_exists($obj, 'image') and $img = $obj->image) {
+    if ($obj->has('image') and $img = $obj->image) {
       $node->image[LANGUAGE_NONE][0]['value'] = $img;
     }
     node_save($node);
@@ -110,6 +126,9 @@ class proposition extends CommexRestResource {
         'expires' => $node->end,
         'category' => $node->offers_wants_categories[LANGUAGE_NONE][0]['tid'], // Just the first
       );
+      if (!empty($node->offers_wants_types)) {
+        $fieldData['type'] = $node->offers_wants_types[LANGUAGE_NONE][0]['tid'];
+      }
       if ($imageItem = isset($node->image[LANGUAGE_NONE]) ? $node->image[LANGUAGE_NONE][0] : 0) {
         $fieldData['image'] = file_create_url($imageItem['uri']);
       }
@@ -176,13 +195,10 @@ class proposition extends CommexRestResource {
     }
 
     // @todo Could this be move to the base class?
-    if (!empty($params['cat_id'])) {
-      // How do we know the name of the category field on the given entity type.
-      // For now we assume it!
-      if (array_key_exists('category', $this->fields())) {
-        \Drupal::logger("commex $fieldname => $setting_name")->debug(print_r($params['cat_id'], 1));
-        $query->condition($fieldname, implode(',', $params['cat_id']), 'IN');
-      }
+    if (!empty($params['category'])) {
+      $query->join('field_data_offers_wants_categories', 'c', "c.entity_id = n.nid AND c.entity_type = 'node'");
+      $category = (array)$params['category'];
+      $query->condition('c.offers_wants_categories_tid', $category, 'IN');
     }
 
     $params += array('sort' => 'changed');
@@ -249,6 +265,9 @@ class proposition extends CommexRestResource {
     return user_access('edit propositions');
   }
 
+  /**
+   * {@inheritdoc}
+   */
   function getCategoryOptions() {
     commex_require('Category', FALSE);
     return Category::getCategories();
@@ -261,14 +280,12 @@ class proposition extends CommexRestResource {
     return $GLOBALS['user']->uid;
   }
 
-
   /**
    * Field default callback
    */
   function defaultExpiryDate() {
     return strtotime(variable_get('offers_wants_default_expiry', '+1 year'));
   }
-
 
   /**
    * {@inheritdoc}

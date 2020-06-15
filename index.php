@@ -11,15 +11,17 @@ chdir('../');
  * reference to any platform at all. It should be placed at
  * /commex/index.php
  * relative to the application root.
- * Platform maintainers should not touch this file, only files within
+ * Platform maintainers should not touch this file, only files under
  * /commex/resources/
  *
  * NB Ensure the web server is picking up the directives in this directory's .htaccess
+ * NB Also ensure the web service is putting requests with a path into this directory
+ *
+ * @todo
  */
 
 define('COMMEX_VERSIONS', '0.5');
 set_exception_handler('commex_rest_exception_handler');
-
 
 foreach ($_SERVER as $name => $value) {
   if (substr($name, 0, 5) == 'HTTP_') {
@@ -30,12 +32,13 @@ if (isset($_SERVER['CONTENT_TYPE'])) {
   // Not used
   $headers['Content-Type'] = $_SERVER['CONTENT_TYPE'];
 }
+$headers += ['Accept' => 'application/json'];
 
 // Deny access
 if ($headers['Accept'] != '*/*') {
   if ($_SERVER["REQUEST_METHOD"] != 'OPTIONS') {
     if ($headers['Accept'] and $headers['Accept'] != strtolower('application/json')) {
-      commex_deliver(406, 'Not Acceptable: '.$headers['Accept']);
+      commex_deliver(406, 'Not acceptable: '.$headers['Accept']);
     }
   }
 }
@@ -43,7 +46,9 @@ if ($headers['Accept'] != '*/*') {
 $request = parse_url($_SERVER['REQUEST_URI']);
 //request path begins with /commex
 @list(,,$resource_type, $id, $operation) = explode('/', $request['path']);
-
+if ($resource_type == 'commex') {
+  @list(,,,$resource_type, $id, $operation) = explode('/', $request['path']);
+}
 process(
   $_SERVER["REQUEST_METHOD"],
   $resource_type,
@@ -89,7 +94,7 @@ function process($method, $resource_type, $id = 0, $operation= '', $query_string
   require_once 'commex/config.php';
   //This allows each endpoint / service potentially to do its own authentication
   if (!$resource_type) {
-    // This applies to ALL methods
+    // On login theres no url to take opportunity to deliver the config.
     return commex_deliver(200, commex_config());
   }
 
@@ -262,7 +267,7 @@ function commex_json_input() {
   $input = file_get_contents('php://input');
   $body_array = (array)json_decode($input);
   if ($input and empty($body_array)) {
-    commex_deliver(400, 'Unable to parse http body input');
+    commex_deliver(400, 'Unable to parse http body input: '.$input);
   }
   html_entity_decode_deep($body_array);
   return $body_array;
@@ -283,16 +288,19 @@ function html_entity_decode_deep(&$val) {
 }
 
 /**
- * Supporting functions
+ * Load a class corresponding to a resource type
+ *
+ * @param string $resource_type
+ *   e.g. transaction, offer etc.
  */
 function commex_get_resource_plugin($resource_type) {
   global $endpoints;
   commex_require('CommexRestResourceInterface', TRUE);
   commex_require('CommexRestResource', FALSE);
-  $classname = isset($endpoints[$resource_type]) ? $endpoints[$resource_type] : $resource_type;
-  commex_require($classname, FALSE);
-  if (class_exists($classname)) {
-    return new $classname($resource_type);
+  $className = 'Commex'.ucfirst($resource_type);
+  commex_require($resource_type, FALSE);
+  if (class_exists($className)) {
+    return new $className($resource_type);
   }
   throw new \Exception('File does not exist: '. $className);
 }
@@ -363,7 +371,7 @@ function commex_json_deliver($status_code, $content = '') {
  *
  * @param Exception $exception
  */
-function commex_rest_exception_handler(\Exception $exception) {
+function commex_rest_exception_handler($exception) {
   return commex_deliver(500, $exception->getmessage());
 }
 

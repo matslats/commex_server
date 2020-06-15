@@ -148,7 +148,7 @@ final class CommexObj {
     }
 
     if (count($show_fields) == 1) {
-      return reset($output);
+      //return reset($output);
     }
     return $output;
   }
@@ -203,12 +203,16 @@ final class CommexObj {
     if (property_exists($this, $name)) {
       return $this->$name;
     }
-    if (isset($this->fields[$name])) {
+    if ($this->has($name)) {
       return $this->fields[$name]->value;
     }
     else {
       throw new \Exception("'$name' doesn't exist either as a field or property on Commex object.");
     }
+  }
+
+  function has($fieldname) {
+    return isset($this->fields[$fieldname]);
   }
 
   /*

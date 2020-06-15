@@ -12,8 +12,12 @@ class Category {
    */
   static function getCategories() {
     global $uid;
+    if (empty($uid)) {
+      commex_require('CommexRestResource', FALSE);
+      CommexRestResource::authenticate($_SERVER['PHP_AUTH_USER'], $_SERVER['PHP_AUTH_PW']);
+    }
     $xid = substr($uid, 0, 4);
-    $db = new Db();
+    $db = new CommexDb();
     $result = $db->select("SELECT category FROM offering_categories WHERE xid = '$xid'");
     foreach ($result as $row) {
       $cats[$row['category']] = $row['category'];
@@ -29,8 +33,8 @@ class Category {
    */
   static function getCategoryNavigation() {
     foreach (self::getCategories() as $catName) {
-      $cats[$catName] = array(
-        'name' => $catname,
+      $cats[htmlentities($catName)] = array(
+        'name' => $catName,
         'color' => '',
         'icon' => ''
       );

@@ -171,6 +171,9 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    */
   public static function authenticate($username, $password) {
     // This is for Drupal 8
+    if (\Drupal::moduleHandler()->moduleExists('alt_login')) {
+      $username = alt_login_convert_alias($username);
+    }
     global $container;
     if ($uid = $container->get('user.auth')->authenticate($username, $password)) {
       \Drupal::currentUser()->setAccount(User::load($uid));

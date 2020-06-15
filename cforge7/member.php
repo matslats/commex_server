@@ -5,7 +5,7 @@
  *
  * Defines the member/ commex resource
  */
-class member extends CommexRestResource {
+class CommexMember extends CommexRestResource {
 
   protected $entityTypeId = 'user';
   protected $bundle = 'user';
@@ -16,61 +16,62 @@ class member extends CommexRestResource {
   public function fields() {
     $fields = array(
       'name' => array(
-        'label' => 'First name & last name',
+        'label' => t('First name & last name'),
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
         'sortable' => TRUE,
         'filter' => 'string'
       ),
       'mail' => array(
-        'label' => 'Email',
+        'label' => t('Email'),
         'fieldtype' => 'CommexFieldText',
         'required' => TRUE,
         'regex' => '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'
       ),
       'pass' => array(
-        'label' => 'Password',
+        'label' => t('Password'),
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
         'view access' => 'OwnerOrAdmin'
       ),
       'phone' => array(
-        'label' => 'Phone',
+        'label' => field_read_instance('user', 'profile_phones', 'user')['label'],
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE,
         '_comment' => 'for validation consider https://github.com/googlei18n/libphonenumber'
       ),
       'aboutme' => array(
-        'label' => 'What would you do if you had enough money?',
+        'label' => field_read_instance('user', 'profile_notes', 'user')['label'],
         'fieldtype' => 'CommexFieldText',
         'lines' => 4,
         'required' => FALSE
       ),
       'street_address' => array(
-        'label' => 'Street address',
+        'label' => t('Street address'),
         'fieldtype' => 'CommexFieldText',
         'required' => FALSE
       ),
       'locality' => array(
-        'label' => 'Neighbourhood',
+        'label' => t('Locality'),
         'fieldtype' => 'CommexFieldEnum',
         'required' => TRUE,
         'options_callback' => 'getLocalityOptions'
       ),
       'portrait' => array(
+        'label' => t('Portrait'),
         // @todo do we need to specify what formats the platform will accept, or what sizes?
         'fieldtype' => 'CommexFieldImage',
         'label' => 'Portrait'
       ),
       'balance' => array(
+        'label' => t('Balance'),
         'fieldtype' => 'CommexFieldVirtual',
-        'label' => 'Balance',
         'callback' => 'memberBalance'
       )
     );
     if(module_exists('cforge_geo')) {
       $fields['coordinates'] = array(
-        'label' => 'Coordinates',
+        'label' => t('Coordinates'),
         'fieldtype' => array(
             'lat' => array(
               'fieldtype' => 'CommexFieldText',
@@ -85,7 +86,6 @@ class member extends CommexRestResource {
     }
     return $fields;
   }
-
 
   /**
    * {@inheritdoc}
@@ -210,10 +210,11 @@ class member extends CommexRestResource {
       elseif (variable_get('user_picture_default', '')) {
         $pic_filepath = variable_get('user_picture_default', '');
       }
+
       $fieldData = parent::loadCommexFields($id) + array(
         'name' => $user->name,
         'mail' => $user->mail,
-        'portrait' => file_create_url($pic_filepath),
+        'portrait' => commexCreateUrl($pic_filepath),
         'phone' => $user->profile_phones ? $user->profile_phones[LANGUAGE_NONE][0]['value'] : '', //@todo put the second phone number here as well?
         'street_addresss' => $user->profile_address[LANGUAGE_NONE][0]['thoroughfare'],
         'locality' => $user->profile_address[LANGUAGE_NONE][0]['dependent_locality'],
@@ -286,6 +287,38 @@ class member extends CommexRestResource {
     $obj->id = $account->uid;
   }
 
+
+  /**
+   * {@inheritdoc}
+   */
+  function operations($id) {
+    $account = User_load($id);
+    $operations = [];
+    if ($GLOBALS['user']->uid == 1 || user_has_role(RID_COMMITTEE) and empty($_SESSION['masquerading'])) {
+      $operations['masquerade'] = 'Masquerade as '.format_username($account);
+    }
+    elseif (!empty($_SESSION['masquerading'])) {
+      $original = user_load($_SESSION['masquerading']);
+      // reverting to oneself isn't really a user operation but where else to put it?
+      $operations['unmasquerade'] = 'Back to '. format_username($original);
+    }
+    return $operations;
+  }
+
+  /**
+   * Mark the user as absent or present
+   */
+  function operate($id, $operation) {
+    global $user;
+    switch ($operation) {
+      case 'masquerade':
+        masquerade_switch_user($id);
+        break;
+      case 'unmasquerade':
+        masquerade_switch_back();
+        break;
+    }
+  }
 
   /**
    * Enum field callback

@@ -1,7 +1,7 @@
 <?php
 
 
-class member extends CommexRestResource {
+class CommexMember extends CommexRestResource {
 
 	/**
 	 * The structure of the member, not translated.
@@ -57,10 +57,20 @@ class member extends CommexRestResource {
         'label' => 'Balance',
         'callback' => 'memberBalance'//method in this class
       ],
+      'limits' => [
+        'fieldtype' => 'CommexFieldVirtual',
+        'label' => 'Balance',
+        'callback' => 'memberLimits'//method in this class
+      ],
       'offers' => [
         'fieldtype' => 'CommexFieldVirtual',
         'label' => 'Offerings',
         'callback' => 'offerCount'//method in this class
+      ],
+      'lasttrade' => [
+        'fieldtype' => 'CommexFieldVirtual',
+        'label' => 'Offerings',
+        'callback' => 'lastTrade'//method in this class
       ]
     ];
     return $fields;
@@ -117,7 +127,7 @@ class member extends CommexRestResource {
 
 		$query .= " LIMIT $offset, $limit";
 
-		$db = new Db();
+		$db = new CommexDb();
 		$results = $db->select($query);
 
 		foreach ($results as $row) {
@@ -146,14 +156,8 @@ class member extends CommexRestResource {
     if ($id == 'me') {
       $id = $uid;
     }
-		// Load your member and put all its field values into an $arrayName = array('',);
-		$db = new Db();
-		$users = $db->select("SELECT * FROM users WHERE uid = '$id'");
-		if (empty($users)) {
-      trigger_error("Could not find user $id", E_USER_WARNING);
-      return array();
-		}
-		$user = reset($users);
+    $user = $this->loadUser($id);
+
 		$usertype = $user['usertype'];
 
 		if ($usertype == "com" || $usertype == "org" || $usertype == "pub") {
@@ -180,7 +184,18 @@ class member extends CommexRestResource {
 		return $values;
 	}
 
-    protected function translateToEntity(CommexObj $obj, ContentEntityInterface $user) {
+  private function loadUser($id) {
+		// Load your member and put all its field values into an $arrayName = array('',);
+		$db = new CommexDb();
+		$users = $db->select("SELECT * FROM users WHERE uid = '$id'");
+		if (empty($users)) {
+      trigger_error("Could not find user $id", E_USER_WARNING);
+      return array();
+		}
+		return reset($users);
+  }
+
+   protected function translateToEntity(CommexObj $obj) {
 //    parent::translateToEntity($obj, $user);//this will save any pics
 //    if ($user->isNew()) {
 //      $user->status = \Drupal::currentUser()->hasPermission('administer users')
@@ -258,7 +273,7 @@ class member extends CommexRestResource {
 			$query .= " WHERE uid = '$obj->id' ";
 		}
 
-		$db = new Db();
+		$db = new CommexDb();
 		$id = $db->query($query);
 		if (!$obj->id) {
 			$obj->id = $id;
@@ -295,14 +310,14 @@ class member extends CommexRestResource {
 
   function offerCount() {
     global $uid;
-    $db = new Db();
+    $db = new CommexDb();
     return $db->select1("SELECT COUNT(*) FROM adverts WHERE ad_type = 'o' AND date_expires >= CURDATE() AND NOT hide AND uid = '$uid'");
   }
 
   function getLocalityOptions() {
     global $uid;
     $xid = substr($uid, 0, 4);
-    $db = new Db();
+    $db = new CommexDb();
     $result = $db->select("SELECT sub_area FROM subareas WHERE xid = '$xid' AND `active`");
 
     // matslats HACK to ensure that all subareas are on the list.
@@ -317,9 +332,30 @@ class member extends CommexRestResource {
   }
 
   function memberBalance($uid) {
-    $db = new Db();
+    $db = new CommexDb();
     $balance = $db->select1("SELECT `balance` FROM `balances` WHERE `uid` = '$uid'");
     return $balance;
+  }
+
+  function memberLimits($uid) {
+    $output = [];
+    $db = new CommexDb();
+    $result = $db->select("SELECT `credit_limit`, `debit_limit` FROM `users` WHERE `uid` = '$uid'");
+    $limits = array_filter($result[0], function($a){return $a <> '0.00';});
+    if (isset($limits['debit_limit'])) {
+      $output[] = 'Debit limit: '.-$limits['debit_limit'];
+    }
+    if (isset($limits['credit_limit'])) {
+      $output[] = 'Credit limit: '.$limits['credit_limit'];
+    }
+    return implode('<br />', $output);
+  }
+
+  function lastTrade($uid) {
+    $db = new CommexDb();
+    if ($date = $db->select1("SELECT max(date_entered) FROM `transactions` WHERE `buyer` = '$uid' OR `seller` = '$uid'")) {
+      return 'Last trade: '.$date;
+    }
   }
 
   /*
@@ -345,13 +381,11 @@ class member extends CommexRestResource {
 
   /**
    * Add operations for user
-   *
-   * TODO TIM
    */
   function operations($id) {
     global $uid;
     if ($this->isAdmin() or $id == $uid) {
-      $db = new Db();
+      $db = new CommexDb();
       $isPresent = $db->select("SELECT present FROM users WHERE uid = '$uid'");
 
       if ($isPresent) {
@@ -361,16 +395,35 @@ class member extends CommexRestResource {
         $operations['present'] = 'Back from holiday';
       }
     }
+    if ($this->isAdmin() and empty($_SESSION['masquerading_as'])) {
+      $user = $this->loadUser($id);
+      $operations['masquerade'] = 'Masquerade as '.$user['firstname'];
+    }
+    elseif ($_SESSION['masquerading_as']) {
+      // reverting to oneself isn't really a user operation but where else to put it?
+      $operations['unmasquerade'] = 'Stop Masquerading';
+    }
+    return $operations;
   }
 
   function operate($id, $operation) {
+    global $uid, $user;
     switch ($operation) {
       case 'absent':
-        db_query('UPDATE users set present = 0 where id = '.$id);
+        $db = new CommexDb();
+        $db->query('UPDATE users set present = 0 where id = '.$id);
         break;
       case 'present':
-        db_query('UPDATE users set present = 1 where id = '.$id);
+        $db = new CommexDb();
+        $db->query('UPDATE users set present = 1 where id = '.$id);
         break;
+      case 'masquerade':
+        $_SESSION['masquerading_as'] = $id;
+        $user = $this->loadUser($id);
+        break;
+      case 'unmasquerade':
+        //$user = $this->loadUser($_SESSION['masquerade']);
+        unset($_SESSION['masquerading_as']);
     }
   }
 
@@ -379,4 +432,6 @@ class member extends CommexRestResource {
     if ($this->object->id == $uid) return TRUE;
     return substr($uid, 4) == '0000';
   }
+
 }
+

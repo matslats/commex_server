@@ -38,6 +38,12 @@ abstract class CommexRestResourceBase {
   protected $deleteConfirm = "Are you sure you want to delete this item?";
 
   /**
+   * List of Field names that are required.
+   * @var array
+   */
+  protected $required;
+
+  /**
    * Check that all the standard endpoints have required fields. It wasn't
    * obvious how to jig the architecture to allow each type to check itself, for
    * example to do more detailed checks, or where to document this!
@@ -45,22 +51,20 @@ abstract class CommexRestResourceBase {
   function __construct($endpoint) {
     switch($endpoint) {
       case 'member';
-        $required = array('name', 'mail', 'pass', 'portrait');
+        $this->required = array('name', 'mail', 'pass', 'portrait');
         break;
       case 'offer':
       case 'want':
         // todo: check that user_id ia a references
-        $required = array('title', 'description', 'user_id', 'category');
+        $this->required= array('title', 'description', 'user_id', 'category');
         break;
       case 'transaction':
         // todo: check that payer and payee are references
-        $required = array('amount', 'description', 'payer', 'payee');
+        $this->required = array('amount', 'description', 'payer', 'payee');
         break;
-      default:
-        throw new \Exception('Unsupported endpoint: '.$endpoint);
     }
 
-    if ($missing = array_diff($required, array_keys($this->fields()))) {
+    if ($missing = array_diff($this->required, array_keys($this->fields()))) {
       throw new exception('Missing fields on '.get_class($this->resourcePlugin).': '.implode(', ', $missing));
     }
 
@@ -90,18 +94,20 @@ abstract class CommexRestResourceBase {
    * {@inheritdoc}
    */
   public function getOptions($id = NULL, $operation = NULL) {
-    //we can read the commex object to know about view and edit access.
-    $methods = array('OPTIONS', 'GET', 'HEAD');
+    $methods = array('OPTIONS');
     if ($id) {
+      // Read the commex object to know about view and edit access.
       $values = $this->loadCommexFields($id);
       $obj = $this->getObj($values);
-      if ($operation && $ops = $this->operations($id)) {
-        if (isset($ops[$operation])) {
-          $methods[] = 'PUT';
+      if ($operation) {
+        if ($ops = $this->operations($id)) {
+          if (isset($ops[$operation])) {
+            $methods[] = 'PUT';
+          }
         }
+        return $methods;
       }
       else {
-        $obj->set($values);
         if ($obj->editable) {
           $methods[] = 'PATCH';
         }
@@ -115,6 +121,8 @@ abstract class CommexRestResourceBase {
         $methods[] = 'POST';
       }
     }
+    $methods[] = 'GET';
+    $methods[] = 'HEAD';
     return $methods;
   }
 

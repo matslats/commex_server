@@ -1,6 +1,6 @@
 <?php
 
-use Drupal\smallads\Entity\SmallAd;
+use Drupal\smallads\Entity\Smallad;
 use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
@@ -8,7 +8,7 @@ use Drupal\Core\Entity\ContentEntityInterface;
  *
  * Defines the want/ commex resource
  */
-class Want extends CommexRestResource {
+class CommexWant extends CommexRestResource {
 
   protected $entityTypeId = 'smallad';
   protected $bundle = 'want';
@@ -66,7 +66,7 @@ class Want extends CommexRestResource {
    * {@inheritdoc}
    */
   function loadCommexFields($id) {
-    if ($smallad = SmallAd::load($id)) {
+    if ($smallad = Smallad::load($id)) {
       $values = parent::loadCommexFields($id) + [
         'title' => $smallad->label(),
         'description' => $smallad->body->value,//how do we make this safe?
@@ -110,7 +110,7 @@ class Want extends CommexRestResource {
     if (!empty($params['fragment'])) {
       $group = $query->orConditionGroup()
         ->condition('title', '%'.$params['fragment'].'%', 'LIKE')
-        ->condition('body', '%'.$params['fragment'].'%', 'LIKE');
+        ->condition('body__value', '%'.$params['fragment'].'%', 'LIKE');
       $query->condition($group);
     }
     if (!empty($params['category'])) {

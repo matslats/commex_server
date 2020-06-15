@@ -7,7 +7,7 @@ use Drupal\user\Entity\User;
  * @file
  * Defines the member/ commex resource
  */
-class Member extends CommexRestResource {
+class CommexMember extends CommexRestResource {
 
   protected $entityTypeId = 'user';
   protected $bundle = 'user';
@@ -260,6 +260,14 @@ class Member extends CommexRestResource {
         $operations['present'] = 'Return from holiday';
       }
     }
+    if (\Drupal::currentUser()->hasPermission('administer users') and empty($_SESSION['masquerading'])) {
+      $operations['masquerade'] = 'Masquerade as '.$account->getDisplayName();
+    }
+    elseif ($uid = $_SESSION['masquerading']) {
+      $original = User::load($uid);
+      // reverting to oneself isn't really a user operation but where else to put it?
+      $operations['unmasquerade'] = 'Back to '. $original->getDisplayName();
+    }
     return $operations;
   }
 
@@ -271,12 +279,22 @@ class Member extends CommexRestResource {
     switch ($operation) {
       case 'absent':
         $account->present->value = 0;
+        $account->save();
         break;
       case 'present':
         $account->present->value = 1;
+        $account->save();
         break;
+      case 'masquerade':
+        $_SESSION['masquerade'] = \Drupal::currentUser()->id();
+        $account = User::load($id);
+        \Drupal::service('account_switcher')->switchTo($account);
+        break;
+      case 'unmasquerade':
+        $account = User::load($_SESSION['masquerade']);
+        $_SESSION['masquerade'] = 0;
+        \Drupal::service('account_switcher')->switchTo($account);
     }
-    $account->save();
   }
 
   /**

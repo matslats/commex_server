@@ -9,7 +9,12 @@
  * @file
  * Defines the wallet (special) resource
  */
-class Wallet {
+class CommexWallet {
+
+  function __construct($endpoint) {
+    $this->required = array();
+    $this->resource = $endpoint;
+  }
 
   /**
    * Get Wallets, assuming they identifiable by their holders.

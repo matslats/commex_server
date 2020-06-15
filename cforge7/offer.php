@@ -6,7 +6,7 @@ commex_require('proposition', FALSE);
  * @file
  * Defines the offer/ commex resource
  */
-class offer extends proposition {
+class CommexOffer extends proposition {
 
   function fields() {
     $fields = parent::fields();

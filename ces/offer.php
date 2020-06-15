@@ -5,7 +5,7 @@ commex_require('advert', FALSE);
 /**
  * Class for handling the offerings resource
   */
-class offer extends advert {
+class CommexOffer extends advert {
 
 	/**
 	 * The structure of the offer, not translated.
@@ -49,7 +49,7 @@ class offer extends advert {
     global $uid;
     $operations = array();
     if ($this->ownerOrAdmin()) {
-      $db = new Db();
+      $db = new CommexDb();
       $hidden = $db->select1("SELECT hide from adverts WHERE id = '$id'");
       if ($hidden) {
         $operations['show'] = 'Show this offer';
@@ -70,7 +70,7 @@ class offer extends advert {
    *   A key in the result of operations i.e. show, hide
    */
   function operate($id, $operation) {
-    $db = new Db();
+    $db = new CommexDb();
     switch ($operation) {
       case 'show':
         $db->query("UPDATE adverts SET hide = 0 WHERE id = '$id'");

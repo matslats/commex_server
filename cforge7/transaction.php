@@ -7,7 +7,7 @@ module_load_include('inc', 'mcapi');
  * Defines the credit/ commex resource
  * The classname transaction is already in use in the mutual credit module
  */
-class credit extends CommexRestResource {
+class CommexTransaction extends CommexRestResource {
 
   protected $entityTypeId = 'transaction';
 
@@ -48,7 +48,7 @@ class credit extends CommexRestResource {
         'sortable' => TRUE
       ),
       'amount' => array(
-        'label' => 'Amount',
+        'label' => 'Value',
         'fieldtype' => 'CommexFieldInteger',
         'min' => 0,
         'required' => TRUE,

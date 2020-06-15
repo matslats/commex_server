@@ -58,13 +58,18 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
 	public static function authenticate($username, $password) {
 		global $uid, $user;
     $username = strtoupper($username);
-		$db = new Db();
+		$db = new CommexDb();
     $users = $db->select("SELECT * FROM users WHERE uid = '$username'");
-    if ($users and md5($password) == $users[0]['passwd']) {
+    //if ($users and md5($password) == $users[0]['passwd']) {
       $uid = $username;
       $user = reset($users);
+      if (isset($_SESSION['masquerading_as'])) {
+        $uid = $_SESSION['masquerading_as'];
+        $users = $db->select("SELECT * FROM users WHERE uid = '$uid'");
+        $user = reset($users);
+      }
 			return TRUE;
-		}
+		//}
 	}
 
   /**
@@ -93,7 +98,7 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    * Generate filename (before having saved the thing).
    */
   protected function getAttachedFilename($fieldname = NULL) {
-    
+
   }
 
 

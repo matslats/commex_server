@@ -158,12 +158,13 @@ abstract class CommexRestResource extends CommexRestResourceBase implements Comm
    * {@inheritdoc}
    */
   public static function authenticate($username, $password) {
-    // Move this
     global $user;
-    if ($uid = user_authenticate($username, $password)) {
-      $user = user_load($uid);
+    if ($user->uid == 0) {
+      if ($uid = user_authenticate($username, $password)) {
+        $user = user_load($uid);
+      }
     }
-    return (bool)$uid;
+    return (bool)$user->uid;
   }
 
   /**

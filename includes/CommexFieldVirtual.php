@@ -44,7 +44,7 @@ class CommexFieldVirtual extends CommexField {
   /**
    * Determines whether this field can be edited by this user.
    */
-  function editable() {
+  function editable($existing = FALSE) {
     return FALSE;
   }
 
