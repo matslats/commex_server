@@ -1,0 +1,1054 @@
+openapi: 3.0.0
+info:
+  title: Community Exchange API
+  description: Between a mobile app and a community platform, such as LETS or Timebanking
+  version: 1.0.0
+paths:
+  /:
+    get:
+      summary: Configuration object
+      description: Since this app is designed to work with many platforms, some differences
+        are allowed between platforms. This config is not specific to any
+        endpoints. Each content type has its own config in OPTIONS
+      responses:
+        "200":
+          description: Configuration from the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Config"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  /member:
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      description: Explain here...
+      responses:
+        "200":
+          description: Data structures keyed by method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: List of members, with filter
+      description: Note that some parameters depend on optional fields. I wonder if these
+        can be added automatically for fields not specified in this api?
+      parameters:
+        - name: limit
+          in: query
+          description: number of results to return, defaults to 10
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Position of first search result to show.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: locality
+          in: query
+          description: Filter by member's address locality field, valid options are in
+            config.
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Field to sort by from the list of member fields, optionally followed
+            by a comma and asc or desc e.g. lastname,desc. Default is not yet
+            specified - maybe geo,asc if avaialble.
+          required: false
+          schema:
+            type: string
+        - name: latitude
+          in: query
+          description: lat AND long needed. Requires radius > 0, Defaults to the user's own
+            location if known
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: radius
+          in: query
+          description: Radius within which to search, in km
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: fragment
+          in: query
+          description: String on which to filter the user name
+          required: false
+          schema:
+            type: string
+        - name: depth
+          in: query
+          description: 0 means return just the uri, 1 returns the object, 2 returns the
+            object with referenced objects.
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: fields
+          in: query
+          description: Fields to show in the result, comma separated. Valid fields are
+            given in OPTIONS. Defaults to a list of uris. Forces depth 0 to be 1
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An array of uris (or if fields is given objects with fields)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    post:
+      summary: Create a new member
+      description: In the first version this won't be possible. Joining these networks is
+        more than simply creating an account on the move, but approval is needed
+        and some networks prefer admins to create new accounts.
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad"
+      responses:
+        "200":
+          description: the newly created member object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        "400":
+          description: validation error(s)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  "/member/{id}":
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      description: Explain here...
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the member
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Configuration from the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: Retrieve a full member object
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the member
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The full user object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    patch:
+      summary: Edit a member
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the member
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad"
+      responses:
+        "200":
+          description: The full user object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    delete:
+      summary: Delete a member
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the member
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: no body
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  /offer:
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      responses:
+        "200":
+          description: Data structures keyed by method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: List of offers, with filter
+      description: I wonder if these can be added automatically for fields not specified in
+        this api?
+      parameters:
+        - name: limit
+          in: query
+          description: number of results to return, defaults to 10
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Position of first search result to show.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: locality
+          in: query
+          description: Filter by offer owners' address locality field, valid options are in
+            config.
+          required: false
+          schema:
+            type: string
+        - name: latitude
+          in: query
+          description: lat AND long needed. Requires radius > 0, Defaults to the user's own
+            location if known
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: radius
+          in: query
+          description: Radius within which to search, in km
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: fragment
+          in: query
+          description: String on which to filter the user name
+          required: false
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          description: ID of the owner of the offer
+          required: false
+          schema:
+            type: string
+        - name: cat_id
+          in: query
+          description: The id of a category (should we allow multiple categories?)
+          required: false
+          schema:
+            type: integer
+        - name: depth
+          in: query
+          description: 0 means return just the uri, 1 returns the object, 2 returns the
+            object with referenced objects.
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: fields
+          in: query
+          description: Fields to show in the result, comma separated. Valid fields are
+            given in OPTIONS. Defaults to a list of uris. Forces depth 0 to be 1
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Field to sort by from the list of offer fields, optionally followed
+            by a comma and asc or desc e.g. title,desc.
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An array of uris (or if fields is given objects with fields)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    post:
+      summary: Create a new offer
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad"
+      responses:
+        "200":
+          description: the newly created offer object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  "/offer/{id}":
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      description: Explain here...
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the offer
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Configuration from the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: Retrieve a full offer object
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the offer
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The full offer object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    patch:
+      summary: Edit an offer
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the offer
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad2"
+      responses:
+        "200":
+          description: The full offer object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    delete:
+      summary: Delete an offer
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the offer
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: no body
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  /want:
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      responses:
+        "200":
+          description: Data structures keyed by method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: List of wants, with filter
+      description: I wonder if these can be added automatically for fields not specified in
+        this api?
+      parameters:
+        - name: limit
+          in: query
+          description: number of results to return, defaults to 10
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Position of first search result to show.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: locality
+          in: query
+          description: Filter by want owners' address locality field, valid options are in
+            config.
+          required: false
+          schema:
+            type: string
+        - name: latitude
+          in: query
+          description: lat AND long needed. Requires radius > 0, Defaults to the user's own
+            location if known
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: longitude
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: radius
+          in: query
+          description: Radius within which to search, in km
+          required: false
+          schema:
+            type: number
+            format: float
+        - name: fragment
+          in: query
+          description: String on which to filter the user name
+          required: false
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          description: ID of the owner of the want
+          required: false
+          schema:
+            type: string
+        - name: cat_id
+          in: query
+          description: The id of a category (should we allow multiple categories?)
+          required: false
+          schema:
+            type: integer
+        - name: depth
+          in: query
+          description: 0 means return just the uri, 1 returns the object, 2 returns the
+            object with referenced objects.
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: fields
+          in: query
+          description: Fields to show in the result, comma separated. Valid fields are
+            given in OPTIONS. Defaults to a list of uris. Forces depth 0 to be 1
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Field to sort by from the list of want fields, optionally followed
+            by a comma and asc or desc e.g. title,desc.
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An array of uris (or if fields is given objects with fields)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    post:
+      summary: Create a new want
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad"
+      responses:
+        "200":
+          description: the newly created want object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  "/want/{id}":
+    options:
+      summary: Get the available methods and data schema for each (this will be a
+        defined type...)
+      description: Explain here...
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the want
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Configuration from the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: Retrieve a full want object
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the want
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The full want object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    patch:
+      summary: Edit a want
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the want
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad2"
+      responses:
+        "200":
+          description: The full want object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Smallad"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    delete:
+      summary: Delete a want
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the want
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: no body
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  /transaction:
+    options:
+      summary: Get the available methods and data schema for this endpoint
+      responses:
+        "200":
+          description: Data structures keyed by method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: List of transactions, filtered
+      description: I wonder if these can be added automatically for fields not specified in
+        this api?
+      parameters:
+        - name: limit
+          in: query
+          description: number of results to return, defaults to 10
+          required: false
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Position of first search result to show.
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: fragment
+          in: query
+          description: String on which to filter the transaction description
+          required: false
+          schema:
+            type: string
+        - name: payer
+          in: query
+          description: User ID of the payer
+          required: false
+          schema:
+            type: integer
+        - name: payee
+          in: query
+          description: User ID of the payee
+          required: false
+          schema:
+            type: integer
+        - name: involving
+          in: query
+          description: Filter where the payer OR payee was in this transaction
+          required: false
+          schema:
+            type: integer
+        - name: state
+          in: query
+          description: The state of the transactions, usually just 'done' ad 'pending'
+          required: false
+          schema:
+            type: string
+        - name: cat_id
+          in: query
+          description: The id of a category (should we allow multiple categories?)
+          required: false
+          schema:
+            type: integer
+        - name: depth
+          in: query
+          description: 0 means return just the uri, 1 returns the object, 2 returns the
+            object with referenced objects.
+          required: false
+          schema:
+            type: number
+            format: double
+        - name: fields
+          in: query
+          description: Fields to show in the result, comma separated. Valid fields are
+            given in OPTIONS. Defaults to a list of uris. Forces depth 0 to be 1
+          required: false
+          schema:
+            type: string
+        - name: sort
+          in: query
+          description: Field to sort by from the list of transaction fields, optionally
+            followed by a comma and asc or desc e.g. title,desc.
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: An array of uris (or if fields is given objects with fields)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    post:
+      summary: Create a new transaction
+      description: Ideally there would be a confirmation stage, in which the transaction
+        could be validated and the user's new balance shown them
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Transaction"
+        description: the json object
+        required: true
+      responses:
+        "200":
+          description: the newly created transaction object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+  "/transaction/{id}":
+    options:
+      summary: Get the available methods and data schema
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the transaction
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Configuration from the server
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fields"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    get:
+      summary: Retrieve a full transaction object
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the transaction
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: The full transaction object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    patch:
+      summary: Edit a transaction
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the transaction
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/Smallad"
+      responses:
+        "200":
+          description: The full transaction object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+    delete:
+      summary: Delete a transaction
+      parameters:
+        - name: id
+          in: path
+          description: The unique ID of the transaction
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: no body
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Errors"
+  "/contact/{user_id}":
+    post:
+      summary: Send a mssage to a member
+      parameters:
+        - name: user_id
+          in: path
+          description: the id of the user
+          required: true
+          schema:
+            type: string
+            format: date
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Message"
+        description: Ad object to be stored
+        required: true
+      responses:
+        "200":
+          description: Sent
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Errors"
+servers:
+  - url: https://virtserver.swaggerhub.com/matslats/commex_mobile/1.0.0
+  - url: http://virtserver.swaggerhub.com/matslats/commex_mobile/1.0.0
+components:
+  requestBodies:
+    Smallad:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Smallad"
+      description: the json object
+      required: true
+    Smallad2:
+      content:
+        multipart/form-data:
+          schema:
+            $ref: "#/components/schemas/Smallad"
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Smallad"
+      description: the json object
+      required: true
+  schemas:
+    Config:
+      type: object
+      properties:
+        versions:
+          type: array
+          description: the supported API version numbers
+          items:
+            type: number
+            format: float
+        restPrefix:
+          type: string
+          description: Path prefix for all routes. Replace '{v}' with the version string
+        logo:
+          type: string
+          description: The url of the logo
+        sitename:
+          type: string
+          description: The name of the site
+        css:
+          type: string
+          description: Additional css for branding
+        endpoints:
+          type: array
+          items:
+            $ref: "#/components/schemas/Endpoint"
+          description: a list of supported endpoints from members, offer, want,
+            transaction, event, post, alert
+        fieldTypes:
+          type: object
+          description: field definitions, keyed by field type name
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique category ID
+        color:
+          type: string
+          description: the css color of this category optional
+        icon:
+          type: string
+          description: absolute url of an image
+    Endpoint:
+      type: object
+      description: Keyed by resource name. Can this have other, arbitrary properties such
+        as resources-specific settings?
+      properties:
+        label:
+          type: string
+          description: The translated name of the resource
+        label_plural:
+          type: string
+          description: The translated plural name of the resource
+    Fields:
+      type: array
+      description: Fields info for the content type, keyed by the method
+      items:
+        $ref: "#/components/schemas/Field"
+    Field:
+      type: object
+      description: Structure of a field, whether for a form or for display (depends on
+        method). Some types may imply other properties which there is no room to
+        document here I think; E.g. autocomplete type requires an additional uri
+        property
+      properties:
+        label:
+          type: string
+          description: Both - The translated label of the field
+        type:
+          type: string
+          description: Both - TODO what are the options for display and for forms
+        required:
+          type: boolean
+          description: Form - TRUE if the server requires a value for this field to save
+            the object
+        url:
+          type: string
+          description: Form - (autocomplete only) the resource used for field
+            autocompletion, using ?fragment
+        options:
+          type: array
+          description: Form - Options for a 
